@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             );
         }
 
-        const payload = verifyToken(token);
+        const payload: any = verifyToken(token);
         if (payload.role !== 'admin' && payload.role !== 'super_admin') {
             return NextResponse.json(
                 { success: false, message: 'Forbidden: Admin access required' },
@@ -121,7 +121,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             );
         }
 
-        const payload = verifyToken(token);
+        const payload: any = verifyToken(token);
         if (payload.role !== 'admin' && payload.role !== 'super_admin') {
             return NextResponse.json(
                 { success: false, message: 'Forbidden: Admin access required' },

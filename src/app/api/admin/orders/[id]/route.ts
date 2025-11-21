@@ -18,7 +18,7 @@ export async function GET(
             );
         }
 
-        const payload = verifyToken(token);
+        const payload: any = verifyToken(token);
         if (!payload) {
             return NextResponse.json(
                 { success: false, message: 'Invalid token' },

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const payload = verifyToken(token);
+        const payload: any = verifyToken(token);
         if (payload.role !== 'admin' && payload.role !== 'super_admin') {
             return NextResponse.json(
                 { success: false, message: 'Forbidden: Admin access required' },

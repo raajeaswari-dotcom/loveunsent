@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
         if (token) {
             try {
-                const payload = verifyToken(token);
+                const payload: any = verifyToken(token);
                 isAdmin = payload.role === 'admin' || payload.role === 'super_admin';
             } catch (error) {
                 // Not admin, continue with public data
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const payload = verifyToken(token);
-        if (payload.role !== 'admin' && payload.role !== 'super_admin') {
+        const payload: any = verifyToken(token);
+        if (!payload || (payload.role !== 'admin' && payload.role !== 'super_admin')) {
             return NextResponse.json(
                 { success: false, message: 'Forbidden: Admin access required' },
                 { status: 403 }
