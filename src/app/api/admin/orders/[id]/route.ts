@@ -26,7 +26,7 @@ export async function GET(
             );
         }
 
-        const order = await Order.findById(params.id)
+        const order: any = await Order.findById(params.id)
             .populate('customerId', 'name email phone')
             .populate('writerId', 'name email')
             .populate('paperId', 'name price')
