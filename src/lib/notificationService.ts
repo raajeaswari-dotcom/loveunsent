@@ -2,7 +2,13 @@ import { sendEmail, sendSMS, sendWhatsApp } from '@/utils/notificationSender';
 import { Notification } from '@/models/Notification';
 import { User } from '@/models/User';
 
-type EventType = 'order_placed' | 'writer_assigned' | 'qc_completed' | 'shipped' | 'delivered';
+type EventType =
+  | 'order_placed'
+  | 'writer_assigned'
+  | 'qc_completed'
+  | 'qc_rejected'
+  | 'shipped'
+  | 'delivered';
 
 export async function triggerNotification(eventType: EventType, order: any, recipientId?: string) {
     try {
@@ -29,18 +35,27 @@ export async function triggerNotification(eventType: EventType, order: any, reci
                 title = 'Order Confirmation';
                 message = `Hi ${user.name}, your order ${order.orderId} has been placed successfully!`;
                 break;
+
             case 'writer_assigned':
                 title = 'Writer Assigned';
                 message = `Good news! A writer has been assigned to your order ${order.orderId}.`;
                 break;
+
             case 'qc_completed':
                 title = 'Quality Check Passed';
                 message = `Your letter for order ${order.orderId} has passed our quality check and is ready for packing.`;
                 break;
+
+            case 'qc_rejected':
+                title = 'Quality Check Failed';
+                message = `Unfortunately, your letter for order ${order.orderId} did NOT pass quality check. Our team will review it again.`;
+                break;
+
             case 'shipped':
                 title = 'Order Shipped';
                 message = `Your order ${order.orderId} has been shipped! Tracking ID: ${order.fulfillment?.trackingId}`;
                 break;
+
             case 'delivered':
                 title = 'Order Delivered';
                 message = `Your order ${order.orderId} has been delivered. We hope you love it!`;
@@ -50,7 +65,7 @@ export async function triggerNotification(eventType: EventType, order: any, reci
         // Log to DB
         await Notification.create({
             recipient: user._id,
-            channel: 'email', // Defaulting to email for log, but we might send multiple
+            channel: 'email',
             type: 'order_update',
             title,
             message,
