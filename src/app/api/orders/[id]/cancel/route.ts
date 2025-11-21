@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
-import Order from '@/models/Order';
-import { verifyAuth } from '@/lib/auth';
+import { Order } from '@/models/Order';
+import { verifyToken } from '@/lib/auth';
 
 export async function POST(
     request: NextRequest,
@@ -11,21 +11,27 @@ export async function POST(
         await dbConnect();
 
         // Verify authentication
-        const authResult = await verifyAuth(request);
-        if (!authResult.authenticated || !authResult.user) {
+        const token = request.cookies.get('token')?.value;
+        if (!token) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
+        const decoded: any = verifyToken(token);
+        if (!decoded) {
+            return NextResponse.json(
+                { error: 'Invalid token' },
+                { status: 401 }
+            );
+        }
+
         const { id } = params;
-        const userId = authResult.user.userId;
+        const userId = decoded.userId;
 
         // Find order and verify ownership
-        await dbConnect();
         const foundOrder = await Order.findById(id);
-
 
         if (!foundOrder) {
             return NextResponse.json(
@@ -43,8 +49,8 @@ export async function POST(
         }
 
         // Check if order can be cancelled (only pending payment or recently paid)
-        const cancellableStatuses = ['payment_pending', 'payment_completed'];
-        if (!cancellableStatuses.includes(foundOrder.workflowStatus)) {
+        const cancellableStatuses = ['pending_payment', 'paid'];
+        if (!cancellableStatuses.includes(foundOrder.workflowState)) {
             return NextResponse.json(
                 { error: 'This order cannot be cancelled. Please contact support.' },
                 { status: 400 }
@@ -52,8 +58,10 @@ export async function POST(
         }
 
         // Update order status to cancelled
-        foundOrder.workflowStatus = 'cancelled';
-        foundOrder.paymentStatus = 'refunded'; // If payment was made, mark for refund
+        foundOrder.workflowState = 'cancelled';
+        if (foundOrder.payment?.status === 'captured') {
+            foundOrder.payment.status = 'pending'; // Mark for refund
+        }
         await foundOrder.save();
 
         // TODO: Trigger refund process if payment was completed

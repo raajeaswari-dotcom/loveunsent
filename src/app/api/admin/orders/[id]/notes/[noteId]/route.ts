@@ -20,7 +20,7 @@ export async function DELETE(
         }
 
         const payload = verifyToken(token);
-        if (payload.role !== 'admin' && payload.role !== 'super_admin') {
+        if (!payload || (payload.role !== 'admin' && payload.role !== 'super_admin')) {
             return NextResponse.json(
                 { success: false, message: 'Forbidden: Admin access required' },
                 { status: 403 }
