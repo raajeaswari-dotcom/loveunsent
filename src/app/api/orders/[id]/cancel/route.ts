@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
+import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
 import { verifyAuth } from '@/lib/auth';
 
@@ -23,8 +23,9 @@ export async function POST(
         const userId = authResult.user.userId;
 
         // Find order and verify ownership
-        const order = await dbConnect();
+        await dbConnect();
         const foundOrder = await Order.findById(id);
+
 
         if (!foundOrder) {
             return NextResponse.json(
@@ -34,7 +35,7 @@ export async function POST(
         }
 
         // Verify the order belongs to the authenticated user
-        if (foundOrder.customer.toString() !== userId) {
+        if (foundOrder.customerId.toString() !== userId) {
             return NextResponse.json(
                 { error: 'You can only cancel your own orders' },
                 { status: 403 }
