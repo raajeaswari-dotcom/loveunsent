@@ -1,10 +1,10 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 
-// Load environment variables from .env.local
-dotenv.config({ path: '.env.local' });
+// Configure Cloudinary
+// Make sure you have these environment variables set in your .env.local:
+// NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 
 // Configure Cloudinary
 cloudinary.config({
