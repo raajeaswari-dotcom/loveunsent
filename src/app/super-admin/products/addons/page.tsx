@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Search, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
 
 interface Addon {
     _id: string;
@@ -229,7 +230,7 @@ export default function AddonsManagementPage() {
                                     filteredAddons.map((addon) => (
                                         <TableRow key={addon._id}>
                                             <TableCell>
-                                                <img src={addon.imageUrl} alt={addon.name} className="h-12 w-12 object-cover rounded" />
+                                                <img src={getCloudinaryUrl(addon.imageUrl)} alt={addon.name} className="h-12 w-12 object-cover rounded" />
                                             </TableCell>
                                             <TableCell className="font-medium">{addon.name}</TableCell>
                                             <TableCell>

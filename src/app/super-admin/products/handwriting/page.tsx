@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Search, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
 
 interface Handwriting {
     _id: string;
@@ -207,7 +208,7 @@ export default function HandwritingManagementPage() {
                                     filteredHandwritings.map((handwriting) => (
                                         <TableRow key={handwriting._id}>
                                             <TableCell>
-                                                <img src={handwriting.imageUrl} alt={handwriting.name} className="h-12 w-20 object-contain rounded border" />
+                                                <img src={getCloudinaryUrl(handwriting.imageUrl)} alt={handwriting.name} className="h-12 w-20 object-contain rounded border" />
                                             </TableCell>
                                             <TableCell className="font-medium">{handwriting.name}</TableCell>
                                             <TableCell>₹{handwriting.priceExtra}</TableCell>

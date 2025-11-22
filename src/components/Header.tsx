@@ -20,64 +20,77 @@ export default function Header() {
     }
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between">
-                <div className="flex items-center gap-6">
-                    <Link href="/" className="flex items-center space-x-2">
-                        <span className="font-serif text-2xl font-bold italic tracking-tighter">Love Unsent</span>
+        <header className="sticky top-0 z-50 w-full bg-cream border-b border-primary/5">
+            <div className="container pt-4 pb-0">
+                <div className="relative flex items-center justify-center mb-4">
+                    {/* Logo Centered */}
+                    <Link href="/" className="flex items-center gap-2">
+                        <span className="font-display text-3xl font-bold text-deep-brown tracking-tight">Love Unsent</span>
                     </Link>
-                    <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                        <Link href="/customize" className="transition-colors hover:text-foreground/80 text-foreground/60">Customize</Link>
-                        <Link href="/how-it-works" className="transition-colors hover:text-foreground/80 text-foreground/60">How it Works</Link>
-                        <Link href="/track" className="transition-colors hover:text-foreground/80 text-foreground/60">Track Order</Link>
-                        <Link href="/about" className="transition-colors hover:text-foreground/80 text-foreground/60">About Us</Link>
-                    </nav>
-                </div>
-                <div className="flex items-center gap-4">
-                    {!loading && (
-                        <div className="hidden md:flex items-center gap-4">
-                            {user ? (
-                                <>
-                                    <span className="text-sm font-medium">Hi, {user.name.split(' ')[0]}</span>
-                                    <Link href="/orders">
-                                        <Button variant="ghost" size="sm">My Orders</Button>
-                                    </Link>
-                                    <Button variant="ghost" size="sm" onClick={() => logout()}>
-                                        Logout
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    <Link href="/login">
-                                        <Button variant="ghost" size="sm">Login</Button>
-                                    </Link>
-                                    <Link href="/register">
-                                        <Button size="sm">Register</Button>
-                                    </Link>
-                                </>
-                            )}
-                        </div>
-                    )}
 
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="md:hidden">
-                            <Menu className="h-5 w-5" />
-                        </Button>
+                    {/* Right Icons */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                        {!loading && (
+                            <div className="hidden md:flex items-center gap-4">
+                                {user ? (
+                                    <Link href="/orders">
+                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy">
+                                            <span className="sr-only">Account</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                        </Button>
+                                    </Link>
+                                ) : (
+                                    <Link href="/login">
+                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy">
+                                            <span className="sr-only">Login</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                        </Button>
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="relative"
+                            className="relative text-deep-brown hover:text-burgundy"
                             onClick={() => setIsCartOpen(true)}
                         >
                             <ShoppingCart className="h-5 w-5" />
                             {itemCount > 0 && (
-                                <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-burgundy text-white text-[10px] flex items-center justify-center">
                                     {itemCount}
                                 </span>
                             )}
                         </Button>
+
+                        <Button variant="ghost" size="icon" className="md:hidden text-deep-brown">
+                            <Menu className="h-5 w-5" />
+                        </Button>
                     </div>
                 </div>
+
+                {/* Centered Navigation */}
+                <nav className="hidden md:flex items-center justify-center gap-1">
+                    <Link
+                        href="/customize"
+                        className={`px-8 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/customize' || pathname === '/'
+                                ? 'bg-mocha text-white'
+                                : 'text-deep-brown hover:text-burgundy'
+                            }`}
+                    >
+                        SHOP
+                    </Link>
+                    <Link
+                        href="/how-it-works"
+                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/how-it-works'
+                                ? 'bg-mocha text-white'
+                                : 'text-deep-brown hover:text-burgundy'
+                            }`}
+                    >
+                        HOW IT WORKS
+                    </Link>
+                </nav>
             </div>
         </header>
     );

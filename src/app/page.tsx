@@ -6,91 +6,48 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
+import { getCloudinaryUrl } from "@/lib/cloudinaryClient";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#FAF9F6]">
+    <div className="flex flex-col min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-[url('/images/paper-texture.png')] opacity-20 pointer-events-none"></div>
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-float-delayed pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent/10 rounded-full blur-3xl animate-float pointer-events-none"></div>
-
+      <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-mocha">
         <div className="container px-4 py-12 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left: Text Content */}
             <div className="space-y-8 max-w-2xl animate-in fade-in slide-in-from-left-8 duration-1000">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-sm border border-primary/10 rounded-full shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                <span className="text-sm font-medium text-primary/80 tracking-wide uppercase">The Art of Expression</span>
-              </div>
-
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif font-bold tracking-tight leading-[0.9] text-foreground">
-                Unspoken <br />
-                <span className="italic text-primary relative inline-block">
-                  Feelings
-                  <svg className="absolute w-full h-3 -bottom-1 left-0 text-accent/30 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-                    <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
-                  </svg>
-                </span>
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight leading-[0.9] text-[#F3E9DD] uppercase drop-shadow-sm">
+                WRITE <br />
+                HEARTFELT <br />
+                LETTERS
               </h1>
 
-              <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-                In a world of instant texts, be the one who writes. We craft beautiful, handwritten letters that carry the weight of your emotions.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-8">
                 <Link href="/customize">
-                  <Button size="lg" className="h-14 px-8 rounded-full text-lg shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-1">
-                    Write a Letter
+                  <Button size="lg" className="h-14 px-10 rounded-full text-lg font-bold bg-burgundy text-white hover:bg-burgundy/90 shadow-xl transition-all duration-300 hover:-translate-y-1">
+                    SHOP ALL LETTERS
                   </Button>
                 </Link>
-                <Link href="/how-it-works">
-                  <Button variant="outline" size="lg" className="h-14 px-8 rounded-full text-lg bg-white/50 backdrop-blur-sm border-primary/20 hover:bg-white/80 transition-all duration-300">
-                    How it Works
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Stats/Trust */}
-              <div className="flex gap-8 pt-8 border-t border-primary/10">
-                <div>
-                  <p className="text-3xl font-bold font-serif text-foreground">10k+</p>
-                  <p className="text-sm text-muted-foreground">Letters Sent</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold font-serif text-foreground">4.9/5</p>
-                  <p className="text-sm text-muted-foreground">Happiness Score</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold font-serif text-foreground">100%</p>
-                  <p className="text-sm text-muted-foreground">Handwritten</p>
-                </div>
               </div>
             </div>
 
             {/* Right: Visuals */}
             <div className="relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-200">
-              <div className="relative z-10 animate-float">
-                <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 rotate-2">
-                  <img
-                    src="/images/hero-letter.png"
-                    alt="Handwritten Letter"
-                    className="w-full h-auto object-cover scale-105 hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent mix-blend-overlay"></div>
+              <div className="relative z-10">
+                <div className="relative overflow-hidden shadow-2xl rounded-3xl border-4 border-white/20">
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                    poster={getCloudinaryUrl("/images/hero-letter.png")}
+                  >
+                    <source src="https://cdn.coverr.co/videos/coverr-writing-a-letter-with-a-fountain-pen-5364/1080p.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
                 </div>
-              </div>
-
-              {/* Floating Elements */}
-              <div className="absolute -top-12 -right-12 bg-white p-4 rounded-2xl shadow-xl animate-float-delayed z-20 max-w-[200px] rotate-6 hidden md:block">
-                <div className="flex gap-1 mb-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                <p className="text-sm font-serif italic text-muted-foreground">"She cried happy tears..."</p>
               </div>
             </div>
           </div>
@@ -137,7 +94,10 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className="py-32 bg-primary text-primary-foreground text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/images/paper-texture.png')] opacity-10 mix-blend-overlay"></div>
+        <div
+          className="absolute inset-0 opacity-10 mix-blend-overlay bg-repeat"
+          style={{ backgroundImage: `url(${getCloudinaryUrl('/images/paper-texture.png')})` }}
+        ></div>
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/10 to-transparent pointer-events-none"></div>
 
         <div className="container px-4 relative z-10">
@@ -177,13 +137,13 @@ function CategoriesCarousel() {
   };
 
   const categories = [
-    { icon: "💌", title: "Love Letters", description: "Pour your heart out", image: "/images/occasions/love_letters.png" },
-    { icon: "🎉", title: "Birthday Wishes", description: "Make their day unforgettable", image: "/images/occasions/birthday_wishes.png" },
-    { icon: "🙏", title: "Thank You Notes", description: "Gratitude expressed beautifully", image: "/images/occasions/thank_you.png" },
-    { icon: "💔", title: "Apologies", description: "Heal hearts with sincere words", image: "/images/occasions/apologies.png" },
-    { icon: "🎓", title: "Congratulations", description: "Celebrate their achievements", image: "/images/occasions/congratulations.png" },
-    { icon: "👋", title: "Farewells", description: "Say goodbye with warmth", image: "/images/occasions/farewells.png" },
-    { icon: "💍", title: "Wedding Vows", description: "Promise forever in writing", image: "/images/occasions/wedding_vows.png" },
+    { icon: "💌", title: "Love Letters", description: "Pour your heart out", image: getCloudinaryUrl("/images/occasions/love_letters.png") },
+    { icon: "🎉", title: "Birthday Wishes", description: "Make their day unforgettable", image: getCloudinaryUrl("/images/occasions/birthday_wishes.png") },
+    { icon: "🙏", title: "Thank You Notes", description: "Gratitude expressed beautifully", image: getCloudinaryUrl("/images/occasions/thank_you.png") },
+    { icon: "💔", title: "Apologies", description: "Heal hearts with sincere words", image: getCloudinaryUrl("/images/occasions/apologies.png") },
+    { icon: "🎓", title: "Congratulations", description: "Celebrate their achievements", image: getCloudinaryUrl("/images/occasions/congratulations.png") },
+    { icon: "👋", title: "Farewells", description: "Say goodbye with warmth", image: getCloudinaryUrl("/images/occasions/farewells.png") },
+    { icon: "💍", title: "Wedding Vows", description: "Promise forever in writing", image: getCloudinaryUrl("/images/occasions/wedding_vows.png") },
     { icon: "👪", title: "Family Letters", description: "Keep bonds strong across miles" },
     { icon: "🪔", title: "Diwali Wishes", description: "Spread light and joy this festival" },
     { icon: "🧵", title: "Raksha Bandhan", description: "Celebrate the bond of siblings" },

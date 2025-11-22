@@ -1,15 +1,19 @@
 "use client";
 
+import { getCloudinaryUrl } from "@/lib/cloudinaryClient";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PenTool, Settings, Send, Heart } from "lucide-react";
 
 export default function HowItWorks() {
     return (
-        <div className="flex flex-col min-h-screen bg-[#FAF9F6]">
+        <div className="flex flex-col min-h-screen bg-taupe">
             {/* Hero Section */}
             <section className="relative py-24 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/images/paper-texture.png')] opacity-20 pointer-events-none"></div>
+                <div
+                    className="absolute inset-0 opacity-20 pointer-events-none bg-repeat"
+                    style={{ backgroundImage: `url(${getCloudinaryUrl('/images/paper-texture.png')})` }}
+                ></div>
                 <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl animate-float-delayed pointer-events-none"></div>
 
                 <div className="container px-4 relative z-10 text-center">

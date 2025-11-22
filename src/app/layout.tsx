@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { Lora, Playfair_Display } from "next/font/google";
+import { Jost, Gorditas } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
-const lora = Lora({
+const jost = Jost({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
 });
 
-const playfair = Playfair_Display({
+const gorditas = Gorditas({
   variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
+  weight: ["400", "700"],
+  style: ["normal"],
 });
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${lora.className} ${playfair.variable} antialiased flex flex-col min-h-screen`}
+        className={`${jost.className} ${gorditas.variable} antialiased flex flex-col min-h-screen`}
       >
         <CartProvider>
           <AuthProvider>

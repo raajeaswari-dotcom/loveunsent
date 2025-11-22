@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Search, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
 
 interface Paper {
     _id: string;
@@ -217,7 +218,7 @@ export default function PapersManagementPage() {
                                     filteredPapers.map((paper) => (
                                         <TableRow key={paper._id}>
                                             <TableCell>
-                                                <img src={paper.imageUrl} alt={paper.name} className="h-12 w-12 object-cover rounded" />
+                                                <img src={getCloudinaryUrl(paper.imageUrl)} alt={paper.name} className="h-12 w-12 object-cover rounded" />
                                             </TableCell>
                                             <TableCell className="font-medium">{paper.name}</TableCell>
                                             <TableCell>{paper.slug}</TableCell>

@@ -1,45 +1,33 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/utils/apiResponse';
+import { uploadBase64ToCloudinary } from '@/lib/cloudinaryHelpers';
 
 export async function POST(req: NextRequest) {
     try {
-        // Cloudflare Configuration
-        const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-        const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+        const formData = await req.formData();
+        const file = formData.get('file') as File;
 
-        if (!accountId || !apiToken) {
-            return errorResponse('Server Configuration Error', 500);
+        if (!file) {
+            return errorResponse('No file uploaded', 400);
         }
 
-        // Request Direct Upload URL from Cloudflare
-        const formData = new FormData();
-        formData.append('requireSignedURLs', 'false'); // Public access for now, or implement signed URLs logic if needed
-
-        // Metadata
-        const metadata = {
-            type: 'handwriting_upload',
-            environment: process.env.NODE_ENV
-        };
-        formData.append('metadata', JSON.stringify(metadata));
-
-        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiToken}`
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            console.error('Cloudflare Error:', data.errors);
-            return errorResponse('Upload Failed', 502);
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            return errorResponse('Invalid file type', 400);
         }
+
+        // Convert file to base64
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Data = `data:${file.type};base64,${buffer.toString('base64')}`;
+
+        // Upload to Cloudinary
+        const result = await uploadBase64ToCloudinary(base64Data, 'loveunsent/products');
 
         return successResponse({
-            uploadUrl: data.result.uploadURL,
-            imageId: data.result.id
+            url: result.secure_url,
+            imageId: result.public_id,
+            uploadUrl: result.secure_url
         });
 
     } catch (error: any) {

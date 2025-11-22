@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Search, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
 
 interface Perfume {
     _id: string;
@@ -204,7 +205,7 @@ export default function PerfumesManagementPage() {
                                         <TableRow key={perfume._id}>
                                             <TableCell>
                                                 {perfume.imageUrl && (
-                                                    <img src={perfume.imageUrl} alt={perfume.name} className="h-12 w-12 object-cover rounded" />
+                                                    <img src={getCloudinaryUrl(perfume.imageUrl)} alt={perfume.name} className="h-12 w-12 object-cover rounded" />
                                                 )}
                                             </TableCell>
                                             <TableCell className="font-medium">{perfume.name}</TableCell>

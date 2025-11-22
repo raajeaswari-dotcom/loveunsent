@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProductImageUpload } from '@/components/admin/ProductImageUpload';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Search, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
 
 interface Occasion {
     _id: string;
@@ -219,7 +220,7 @@ export default function OccasionsManagementPage() {
                                             <TableCell className="font-medium">{occasion.displayOrder}</TableCell>
                                             <TableCell>
                                                 {occasion.imageUrl && (
-                                                    <img src={occasion.imageUrl} alt={occasion.name} className="h-12 w-12 object-cover rounded" />
+                                                    <img src={getCloudinaryUrl(occasion.imageUrl)} alt={occasion.name} className="h-12 w-12 object-cover rounded" />
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-2xl">{occasion.icon}</TableCell>

@@ -21,6 +21,7 @@ const config = {
             fontFamily: {
                 'serif': ['var(--font-heading)', 'serif'],
                 'sans': ['var(--font-body)', 'sans-serif'],
+                'display': ['var(--font-heading)', 'serif'],
             },
             colors: {
                 border: "hsl(var(--border))",
@@ -56,6 +57,16 @@ const config = {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
                 },
+                // New Palette Colors
+                mocha: "#A37B65",
+                cream: "#F3E9DD",
+                taupe: "#DBCDBE",
+                terracotta: "#D79A79",
+                "dusty-rose": "#B97C80",
+                "deep-brown": "#2C1B13",
+                burgundy: "#511317",
+                navy: "#002366",
+                firebrick: "#B22222",
             },
             borderRadius: {
                 lg: "var(--radius)",

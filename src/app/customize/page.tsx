@@ -101,7 +101,7 @@ export default function CustomizePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="min-h-screen bg-dusty-rose">
             <div className="container max-w-6xl py-8 px-4">
                 {/* Header */}
                 <div className="text-center mb-8">

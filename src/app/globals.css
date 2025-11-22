@@ -4,41 +4,43 @@
 
 @layer base {
   :root {
-    /* Warm vintage cream background */
-    --background: 35 35% 96%;
-    --foreground: 25 35% 20%;
+    /* Light Mocha #A37B65 - Main body background */
+    --background: 22 23% 52%;
+    /* Deep Brown #2C1B13 - Primary text */
+    --foreground: 28 38% 12%;
 
-    /* Aged paper card */
-    --card: 40 40% 94%;
-    --card-foreground: 25 35% 20%;
+    /* Cream #F3E9DD - Cards, Input */
+    --card: 33 43% 91%;
+    --card-foreground: 28 38% 12%;
 
-    --popover: 40 40% 94%;
-    --popover-foreground: 25 35% 20%;
+    --popover: 33 43% 91%;
+    --popover-foreground: 28 38% 12%;
 
-    /* Warm terracotta/rust primary */
-    --primary: 15 60% 50%;
-    --primary-foreground: 40 40% 98%;
+    /* Dark Burgundy #511317 - Primary Buttons */
+    --primary: 356 62% 20%;
+    --primary-foreground: 33 43% 91%;
 
-    /* Soft peach secondary */
-    --secondary: 30 50% 88%;
-    --secondary-foreground: 25 35% 25%;
+    /* Terracotta #D79A79 - Secondary */
+    --secondary: 21 53% 66%;
+    --secondary-foreground: 28 38% 12%;
 
-    /* Muted warm beige */
-    --muted: 35 25% 88%;
-    --muted-foreground: 25 20% 45%;
+    /* Taupe #DBCDBE - Muted */
+    --muted: 31 24% 80%;
+    --muted-foreground: 28 38% 12%;
 
-    /* Vintage rose accent */
-    --accent: 345 40% 75%;
-    --accent-foreground: 25 35% 20%;
+    /* Dusty Rose #B97C80 - Accent */
+    --accent: 356 29% 61%;
+    --accent-foreground: 28 38% 12%;
 
-    /* Soft coral destructive */
-    --destructive: 5 70% 55%;
-    --destructive-foreground: 40 40% 98%;
+    /* Firebrick Red #B22222 - Destructive */
+    --destructive: 0 68% 42%;
+    --destructive-foreground: 33 43% 91%;
 
-    /* Warm borders */
-    --border: 35 20% 85%;
-    --input: 35 20% 85%;
-    --ring: 15 60% 50%;
+    /* Deep Brown #2C1B13 - Borders */
+    --border: 28 38% 12%;
+    --input: 33 43% 91%;
+    /* Dark Burgundy #511317 - Ring */
+    --ring: 356 62% 20%;
 
     --radius: 0.75rem;
   }
