@@ -9,6 +9,8 @@ type CustomizationState = {
     perfumeId: string | null;
     addonIds: string[];
     deliveryDate: string | null;
+    inputMethod: 'text' | 'voice' | 'image';
+    handwritingImageUrl: string | null;
 };
 
 type CustomizationContextType = {
@@ -25,6 +27,8 @@ const initialState: CustomizationState = {
     perfumeId: null,
     addonIds: [],
     deliveryDate: null,
+    inputMethod: 'text',
+    handwritingImageUrl: null,
 };
 
 const CustomizationContext = createContext<CustomizationContextType | undefined>(undefined);
@@ -64,13 +68,18 @@ export function CustomizationProvider({ children }: { children: React.ReactNode 
 
     const canProceed = (step: number) => {
         // Step indices based on the wizard flow: 
-        // 0: Message, 1: Paper, 2: Handwriting, 3: Perfume, 4: Addons, 5: Review
+        // 0: Message, 1: Paper, 2: Ink Color, 3: Word Count, 4: Recipient Details, 5: Add-ons, 6: Review
         switch (step) {
-            case 0: return state.message.length > 0;
+            case 0:
+                if (state.inputMethod === 'image') {
+                    return !!state.handwritingImageUrl;
+                }
+                return state.message.length > 0;
             case 1: return !!state.paperId;
-            case 2: return !!state.handwritingId;
-            case 3: return true; // Perfume is optional
-            case 4: return true; // Addons are optional
+            case 2: return true; // Ink color is always selectable
+            case 3: return true; // Recipient details validation handled in page
+            case 4: return true; // Add-ons optional
+            case 5: return true; // Review
             default: return true;
         }
     };

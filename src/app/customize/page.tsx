@@ -1,65 +1,126 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PaperSelector } from '@/components/PaperSelector';
-import { PerfumeSelector } from '@/components/PerfumeSelector';
-import { HandwritingCard } from '@/components/HandwritingCard';
-import { AddonGrid } from '@/components/AddonGrid';
 import { MessageEditor } from '@/components/MessageEditor';
-import { mockApi } from '@/lib/mockApi';
-import { useRouter } from 'next/navigation';
-import { ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+import { AddonGrid } from '@/components/AddonGrid';
+import { ReviewSection } from '@/components/ReviewSection';
 import { useCustomization } from '@/context/CustomizationContext';
 import { useCart } from '@/context/CartContext';
 import { usePrice } from '@/hooks/usePrice';
+import { mockApi } from '@/lib/mockApi';
 
-const STEPS = ['Message', 'Paper', 'Handwriting', 'Perfume', 'Add-ons', 'Review'];
+// Steps of the customization flow
+const STEPS = [
+    'Message',
+    'Paper',
+    'Ink Color',
+    'Recipient Details',
+    'Add-ons',
+    'Review',
+];
+
+// Helper to format occasion names
+const formatOccasionName = (occasion: string): string => {
+    const occasionMap: { [key: string]: string } = {
+        love: 'Love Letters',
+        birthday: 'Birthday Wishes',
+        thankyou: 'Thank You Notes',
+        apology: 'Apologies',
+        congrats: 'Congratulations',
+        farewell: 'Farewells',
+        wedding: 'Wedding Vows',
+        classic: 'Classic',
+        'open-when': 'Open When',
+        unsent: 'Unsent',
+    };
+    return occasionMap[occasion] || occasion.charAt(0).toUpperCase() + occasion.slice(1);
+};
 
 export default function CustomizePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // UI state
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [occasion, setOccasion] = useState<string>('');
+    const [inkColor, setInkColor] = useState<string>('Blue');
+    const [recipientName, setRecipientName] = useState<string>('');
+    const [recipientAddress, setRecipientAddress] = useState<string>('');
+
 
     // Contexts
     const { state, updateState, canProceed } = useCustomization();
     const { addItem } = useCart();
     const { total, breakdown } = usePrice();
 
-    // Data
+    // Data fetched from mock API
     const [papers, setPapers] = useState<any[]>([]);
-    const [perfumes, setPerfumes] = useState<any[]>([]);
-    const [handwritings, setHandwritings] = useState<any[]>([]);
     const [addons, setAddons] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
-            const [p, pf, hw, ad] = await Promise.all([
+            const [p, ad] = await Promise.all([
                 mockApi.getProducts(),
-                mockApi.getPerfumes(),
-                mockApi.getHandwritingStyles(),
-                mockApi.getAddons()
+                mockApi.getAddons(),
             ]);
             setPapers(p);
-            setPerfumes(pf);
-            setHandwritings(hw);
             setAddons(ad);
             setLoading(false);
         };
         fetchData();
-    }, []);
+
+        const occasionParam = searchParams.get('occasion');
+        const typeParam = searchParams.get('type');
+        if (occasionParam) {
+            setOccasion(formatOccasionName(occasionParam));
+        } else if (typeParam) {
+            setOccasion(formatOccasionName(typeParam));
+        }
+    }, [searchParams]);
+
+    const handleBack = () => {
+        if (currentStep > 0) setCurrentStep((prev) => prev - 1);
+    };
+
+    const toggleAddon = (id: string) => {
+        const currentAddons = state.addonIds || [];
+        const newAddons = currentAddons.includes(id)
+            ? currentAddons.filter((a) => a !== id)
+            : [...currentAddons, id];
+        updateState({ addonIds: newAddons });
+    };
 
     const handleNext = () => {
-        if (!canProceed(currentStep)) {
-            alert("Please complete this step before proceeding.");
+        // Ink Color step (index 2) – always selectable
+        if (currentStep === 2) {
+            setCurrentStep((prev) => prev + 1);
             return;
         }
-
+        // Recipient Details step (index 3)
+        if (currentStep === 3) {
+            if (!recipientName.trim() || !recipientAddress.trim()) {
+                alert('Please complete recipient details before proceeding.');
+                return;
+            }
+            setCurrentStep((prev) => prev + 1);
+            return;
+        }
+        // Other steps – validation via canProceed
+        if (!canProceed(currentStep)) {
+            alert('Please complete this step before proceeding.');
+            return;
+        }
         if (currentStep < STEPS.length - 1) {
-            setCurrentStep(prev => prev + 1);
+            setCurrentStep((prev) => prev + 1);
         } else {
-            // Add to Cart
+            // Final step – add to cart
             addItem({
                 id: `custom_${Date.now()}`,
                 type: 'letter',
@@ -68,25 +129,15 @@ export default function CustomizePage() {
                 quantity: 1,
                 details: {
                     ...state,
-                    breakdown
-                }
+                    breakdown,
+                    occasion,
+                    inkColor,
+                    recipientName,
+                    recipientAddress,
+                },
             });
             router.push('/checkout');
         }
-    };
-
-    const handleBack = () => {
-        if (currentStep > 0) {
-            setCurrentStep(prev => prev - 1);
-        }
-    };
-
-    const toggleAddon = (id: string) => {
-        const currentAddons = state.addonIds;
-        const newAddons = currentAddons.includes(id)
-            ? currentAddons.filter(a => a !== id)
-            : [...currentAddons, id];
-        updateState({ addonIds: newAddons });
     };
 
     if (loading) {
@@ -101,31 +152,22 @@ export default function CustomizePage() {
     }
 
     return (
-        <div className="min-h-screen bg-dusty-rose">
+        <div className="min-h-screen bg-[#F5EFE7]">
             <div className="container max-w-6xl py-8 px-4">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold mb-3 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                        Craft Your Letter
-                    </h1>
-                    <p className="text-muted-foreground max-w-2xl mx-auto">
-                        Every detail matters. Let's create something beautiful together.
-                    </p>
+                    <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900">Craft Your Letter</h1>
+                    <p className="text-gray-700 max-w-2xl mx-auto">Every detail matters. Let's create something beautiful together.</p>
                 </div>
 
-                {/* Enhanced Progress Bar */}
+                {/* Progress Bar */}
                 <div className="mb-12 max-w-4xl mx-auto">
                     <div className="relative">
-                        {/* Background line */}
-                        <div className="absolute top-5 left-0 right-0 h-0.5 bg-border"></div>
-
-                        {/* Progress line */}
+                        <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-300" />
                         <div
-                            className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500 ease-out"
+                            className="absolute top-5 left-0 h-0.5 bg-[#5C2E2E] transition-all duration-500 ease-out"
                             style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
-                        ></div>
-
-                        {/* Step circles */}
+                        />
                         <div className="relative flex justify-between">
                             {STEPS.map((step, idx) => (
                                 <div key={step} className="flex flex-col items-center">
@@ -133,18 +175,15 @@ export default function CustomizePage() {
                                         onClick={() => idx <= currentStep && setCurrentStep(idx)}
                                         disabled={idx > currentStep}
                                         className={`w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center text-sm font-semibold mb-2 ${idx < currentStep
-                                            ? 'bg-primary border-primary text-primary-foreground'
+                                            ? 'bg-[#5C2E2E] border-[#5C2E2E] text-white'
                                             : idx === currentStep
-                                                ? 'bg-background border-primary text-primary scale-110 shadow-lg shadow-primary/20'
-                                                : 'bg-background border-border text-muted-foreground'
+                                                ? 'bg-white border-[#5C2E2E] text-[#5C2E2E] scale-110 shadow-lg'
+                                                : 'bg-white border-gray-300 text-gray-400'
                                             } ${idx <= currentStep ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed'}`}
                                     >
                                         {idx < currentStep ? '✓' : idx + 1}
                                     </button>
-                                    <span className={`text-xs md:text-sm font-medium transition-colors ${idx <= currentStep ? 'text-foreground' : 'text-muted-foreground'
-                                        }`}>
-                                        {step}
-                                    </span>
+                                    <span className={`text-xs md:text-sm font-medium transition-colors ${idx <= currentStep ? 'text-gray-900' : 'text-gray-500'}`}>{step}</span>
                                 </div>
                             ))}
                         </div>
@@ -154,205 +193,155 @@ export default function CustomizePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="p-6 md:p-8 border-2 shadow-xl bg-card/80 backdrop-blur-sm">
+                        <Card className="p-6 md:p-8 border-2 border-gray-200 shadow-lg bg-white">
                             <div className="mb-6">
-                                <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2">
-                                    {STEPS[currentStep]}
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    {currentStep === 0 && "Pour your heart out in words"}
-                                    {currentStep === 1 && "Choose the canvas for your thoughts"}
-                                    {currentStep === 2 && "Select a writing style"}
-                                    {currentStep === 3 && "Add a subtle fragrance (optional)"}
-                                    {currentStep === 4 && "Make it extra special (optional)"}
-                                    {currentStep === 5 && "Review your masterpiece"}
+                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{STEPS[currentStep]}</h2>
+                                <p className="text-sm text-gray-600">
+                                    {currentStep === 0 && 'Pour your heart out in words'}
+                                    {currentStep === 1 && 'Choose the canvas for your thoughts'}
+                                    {currentStep === 2 && 'Select your ink color (Free)'}
+                                    {currentStep === 3 && 'Who will receive this letter?'}
+                                    {currentStep === 4 && 'Make it extra special (optional)'}
+                                    {currentStep === 5 && 'Review your masterpiece'}
                                 </p>
                             </div>
 
-                            <div className="min-h-[300px]">
+                            <div>
                                 {currentStep === 0 && (
                                     <MessageEditor value={state.message} onChange={(val) => updateState({ message: val })} />
                                 )}
-
                                 {currentStep === 1 && (
                                     <PaperSelector papers={papers} selectedId={state.paperId || ''} onSelect={(id) => updateState({ paperId: id })} />
                                 )}
-
                                 {currentStep === 2 && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {handwritings.map(hw => (
-                                            <HandwritingCard
-                                                key={hw.id}
-                                                style={hw}
-                                                isSelected={state.handwritingId === hw.id}
-                                                onSelect={() => updateState({ handwritingId: hw.id })}
-                                            />
-                                        ))}
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold text-gray-900">Choose Ink Color</h3>
+                                        <p className="text-sm text-gray-600">Select the color for your handwritten letter (No additional cost)</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {['Blue', 'Black', 'Red', 'Green', 'Purple', 'Brown'].map((color) => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => setInkColor(color)}
+                                                    className={`p-4 rounded-lg border-2 transition-all ${inkColor === color ? 'border-[#5C2E2E] bg-[#5C2E2E]/10' : 'border-gray-300 hover:border-gray-400'}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div
+                                                            className="w-8 h-8 rounded-full border-2 border-gray-300"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    color === 'Blue'
+                                                                        ? '#1E3A8A'
+                                                                        : color === 'Black'
+                                                                            ? '#000000'
+                                                                            : color === 'Red'
+                                                                                ? '#DC2626'
+                                                                                : color === 'Green'
+                                                                                    ? '#16A34A'
+                                                                                    : color === 'Purple'
+                                                                                        ? '#9333EA'
+                                                                                        : '#92400E',
+                                                            }}
+                                                        />
+                                                        <span className="font-medium text-gray-900">{color}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
-
                                 {currentStep === 3 && (
-                                    <div className="space-y-4">
-                                        <Button
-                                            variant={!state.perfumeId ? 'default' : 'outline'}
-                                            onClick={() => updateState({ perfumeId: null })}
-                                            className="w-full md:w-auto"
-                                        >
-                                            No Perfume
-                                        </Button>
-                                        <PerfumeSelector perfumes={perfumes} selectedId={state.perfumeId || ''} onSelect={(id) => updateState({ perfumeId: id })} />
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold text-gray-900">Recipient Details</h3>
+                                        <div className="space-y-4">
+                                            <label className="block text-sm font-medium text-gray-700">Name</label>
+                                            <input
+                                                type="text"
+                                                value={recipientName}
+                                                onChange={(e) => setRecipientName(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#5C2E2E] focus:ring-[#5C2E2E]"
+                                            />
+                                            <label className="block text-sm font-medium text-gray-700">Address</label>
+                                            <textarea
+                                                rows={3}
+                                                value={recipientAddress}
+                                                onChange={(e) => setRecipientAddress(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#5C2E2E] focus:ring-[#5C2E2E]"
+                                            />
+                                        </div>
                                     </div>
                                 )}
-
                                 {currentStep === 4 && (
-                                    <AddonGrid addons={addons} selectedIds={state.addonIds} onToggle={toggleAddon} />
+                                    <AddonGrid addons={addons} selectedIds={state.addonIds || []} onToggle={toggleAddon} />
                                 )}
-
                                 {currentStep === 5 && (
                                     <ReviewSection
+                                        occasion={occasion}
+                                        inkColor={inkColor}
+                                        recipientName={recipientName}
+                                        recipientAddress={recipientAddress}
+                                        addons={addons.filter((a) => (state.addonIds || []).includes(a.id))}
+                                        total={total}
                                         message={state.message}
-                                        paper={papers.find(p => p.id === state.paperId)}
-                                        handwriting={handwritings.find(h => h.id === state.handwritingId)}
-                                        perfume={perfumes.find(p => p.id === state.perfumeId)}
-                                        addons={addons.filter(a => state.addonIds.includes(a.id))}
-                                        deliveryDate={state.deliveryDate}
-                                        onDateChange={(date: string) => updateState({ deliveryDate: date })}
+                                        handwritingImageUrl={state.handwritingImageUrl}
                                     />
                                 )}
+                            </div>
+
+                            {/* Navigation Buttons */}
+                            <div className="flex justify-between mt-6">
+                                <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
+                                    <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                                </Button>
+                                <Button onClick={handleNext}>
+                                    {currentStep === STEPS.length - 1 ? 'Place Order' : 'Next'}
+                                    <ChevronRight className="ml-2 h-4 w-4" />
+                                </Button>
                             </div>
                         </Card>
                     </div>
 
                     {/* Sticky Sidebar Summary */}
                     <div className="lg:col-span-1">
-                        <Card className="p-6 sticky top-24 border-2 shadow-xl bg-gradient-to-br from-card to-muted/20">
-                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-primary" />
+                        <Card className="p-6 sticky top-24 border-2 border-gray-200 shadow-lg bg-white">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-900">
+                                <Sparkles className="w-5 h-5 text-[#5C2E2E]" />
                                 <span>Your Letter</span>
                             </h3>
-
                             <div className="space-y-3 text-sm mb-6">
-                                <div className="flex justify-between py-2 border-b border-border/50">
-                                    <span className="text-muted-foreground">Paper</span>
-                                    <span className="font-medium">{papers.find(p => p.id === state.paperId)?.name || '-'}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-border/50">
-                                    <span className="text-muted-foreground">Style</span>
-                                    <span className="font-medium">{handwritings.find(h => h.id === state.handwritingId)?.name || '-'}</span>
-                                </div>
-                                {state.perfumeId && (
-                                    <div className="flex justify-between py-2 border-b border-border/50">
-                                        <span className="text-muted-foreground">Perfume</span>
-                                        <span className="font-medium">{perfumes.find(p => p.id === state.perfumeId)?.name}</span>
+                                {occasion && (
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Occasion</span>
+                                        <span className="font-medium text-gray-900">{occasion}</span>
                                     </div>
                                 )}
-                                {state.addonIds.length > 0 && (
-                                    <div className="flex justify-between py-2 border-b border-border/50">
-                                        <span className="text-muted-foreground">Add-ons</span>
-                                        <span className="font-medium">{state.addonIds.length} selected</span>
+                                <div className="flex justify-between py-2 border-b border-gray-200">
+                                    <span className="text-gray-600">Paper</span>
+                                    <span className="font-medium text-gray-900">
+                                        {papers.find((p) => p.id === state.paperId)?.name || '-'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-200">
+                                    <span className="text-gray-600">Ink Color</span>
+                                    <span className="font-medium text-gray-900">{inkColor}</span>
+                                </div>
+
+                                {state.addonIds && state.addonIds.length > 0 && (
+                                    <div className="flex justify-between py-2 border-b border-gray-200">
+                                        <span className="text-gray-600">Add‑ons</span>
+                                        <span className="font-medium text-gray-900">{state.addonIds.length} selected</span>
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="bg-primary/5 rounded-lg p-4 mb-6">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-muted-foreground">Total</span>
-                                    <span className="text-2xl font-bold text-primary">₹{total}</span>
+                                <div className="bg-[#C4A68A]/20 rounded-lg p-4 mb-6">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-700">Total</span>
+                                        <span className="text-2xl font-bold text-[#5C2E2E]">₹{total}</span>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={handleBack}
-                                    disabled={currentStep === 0}
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    className="flex-[2]"
-                                    onClick={handleNext}
-                                    size="lg"
-                                >
-                                    {currentStep === STEPS.length - 1 ? 'Add to Cart' : 'Continue'}
-                                    <ChevronRight className="w-4 h-4 ml-2" />
-                                </Button>
                             </div>
                         </Card>
                     </div>
                 </div>
             </div>
         </div>
-    );
-}
-
-function ReviewSection({ message, paper, handwriting, perfume, addons, deliveryDate, onDateChange }: any) {
-    // Calculate min date (Today + 5 days)
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 5);
-    const minDateStr = minDate.toISOString().split('T')[0];
-
-    return (
-        <div className="space-y-6">
-            <Card className="p-6 bg-muted/20 border-dashed border-2">
-                <h3 className="font-bold mb-3 text-lg">Your Message</h3>
-                <p className="whitespace-pre-wrap font-serif text-lg italic leading-relaxed text-foreground/90">
-                    {message || "No message entered..."}
-                </p>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-accent/10 rounded-lg p-4 space-y-1">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider block">Paper</span>
-                    <p className="font-semibold text-foreground">{paper?.name}</p>
-                    <p className="text-sm text-muted-foreground">{paper?.description}</p>
-                </div>
-                <div className="bg-accent/10 rounded-lg p-4 space-y-1">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider block">Handwriting</span>
-                    <p className="font-semibold text-foreground">{handwriting?.name}</p>
-                </div>
-                {perfume && (
-                    <div className="bg-accent/10 rounded-lg p-4 space-y-1">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider block">Perfume</span>
-                        <p className="font-semibold text-foreground">{perfume.name}</p>
-                    </div>
-                )}
-                {addons.length > 0 && (
-                    <div className="bg-accent/10 rounded-lg p-4 space-y-1">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider block">Add-ons</span>
-                        <p className="font-semibold text-foreground">{addons.map((a: any) => a.name).join(', ')}</p>
-                    </div>
-                )}
-            </div>
-
-
-            <Card className="p-6 bg-white border-2 border-primary/10">
-                <h3 className="font-bold mb-4 text-lg flex items-center gap-2">
-                    <span>📅</span> Preferred Delivery Date
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                            We need at least 5 days to handwrite and ship your letter.
-                        </p>
-                        <input
-                            type="date"
-                            min={minDateStr}
-                            value={deliveryDate || ''}
-                            onChange={(e) => onDateChange(e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                    </div>
-                    <div className="text-sm bg-primary/5 p-4 rounded-lg text-primary/80">
-                        {deliveryDate ? (
-                            <p>Target Delivery: <strong>{new Date(deliveryDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
-                        ) : (
-                            <p>Please select a date to help us prioritize your order.</p>
-                        )}
-                    </div>
-                </div>
-            </Card>
-        </div >
     );
 }

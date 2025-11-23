@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Mic, Image as ImageIcon, Type, Upload, X, Loader2, Globe } from 'lucide-react';
@@ -17,33 +16,60 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [uploading, setUploading] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Initialize Speech Recognition
+    const valueRef = useRef(value);
+
     useEffect(() => {
-        if (typeof window !== 'undefined' && (window as any).webkitSpeechRecognition) {
-            const SpeechRecognition = (window as any).webkitSpeechRecognition;
+        valueRef.current = value;
+    }, [value]);
+
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
+    }, [value]);
+
+    // Speech Recognition (Improved)
+    useEffect(() => {
+        // Prefer the standard SpeechRecognition API, fallback to webkitSpeechRecognition
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (typeof window !== 'undefined' && SpeechRecognition) {
             recognitionRef.current = new SpeechRecognition();
             recognitionRef.current.continuous = true;
             recognitionRef.current.interimResults = true;
 
-            recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
+            // Request microphone permission before starting
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(() => {
+                    // Permission granted, ready to start recording when user clicks
+                })
+                .catch((err) => {
+                    console.error('Microphone permission denied', err);
+                });
 
+            recognitionRef.current.onresult = (event: any) => {
+                let finalTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
                         finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
                     }
                 }
-
                 if (finalTranscript) {
-                    onChange(value + ' ' + finalTranscript);
+                    onChange(valueRef.current + ' ' + finalTranscript);
                 }
             };
+
+            recognitionRef.current.onerror = (event: any) => {
+                console.error('Speech recognition error', event.error);
+                setIsRecording(false);
+            };
+        } else {
+            console.warn('SpeechRecognition API not supported in this browser');
         }
-    }, [value, onChange]);
+    }, []);
 
     const toggleRecording = () => {
         if (isRecording) {
@@ -61,29 +87,19 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
 
         setUploading(true);
         try {
-            // 1. Get Upload URL
-            const res = await fetch('/api/upload/public', { method: 'POST' });
-            const { data } = await res.json();
-
-            if (!data?.uploadUrl) throw new Error('Failed to get upload URL');
-
-            // 2. Upload File
             const formData = new FormData();
             formData.append('file', file);
 
-            const uploadRes = await fetch(data.uploadUrl, {
+            const res = await fetch('/api/upload/public', {
                 method: 'POST',
                 body: formData
             });
+            const data = await res.json();
 
-            const uploadData = await uploadRes.json();
-
-            if (uploadData.success) {
-                // Save image URL to state (we'll need to update context to support this)
-                // For now, we'll assume updateState handles arbitrary keys or we update context type later
-                // But strictly, we should update the context type. 
-                // Assuming updateState accepts partial state.
-                updateState({ handwritingImageUrl: uploadData.result.variants[0] } as any);
+            if (data.success) {
+                updateState({ handwritingImageUrl: data.data.url });
+            } else {
+                throw new Error(data.message || 'Upload failed');
             }
         } catch (error) {
             console.error('Upload failed', error);
@@ -95,7 +111,7 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
 
     return (
         <div className="space-y-4">
-            <Tabs defaultValue="text" className="w-full" onValueChange={(val) => updateState({ inputMethod: val } as any)}>
+            <Tabs value={state.inputMethod} className="w-full" onValueChange={(val) => updateState({ inputMethod: val as any })}>
                 <TabsList className="grid w-full grid-cols-3 mb-4">
                     <TabsTrigger value="text" className="flex items-center gap-2">
                         <Type className="w-4 h-4" /> Type
@@ -109,17 +125,10 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
                 </TabsList>
 
                 <TabsContent value="text" className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-muted-foreground">
-                            Type your message in any language
-                        </label>
-                        <Button variant="ghost" size="sm" className="text-xs gap-1">
-                            <Globe className="w-3 h-3" /> Multi-language Support
-                        </Button>
-                    </div>
-                    <Textarea
+                    <textarea
+                        ref={textareaRef}
                         placeholder="Dearest..."
-                        className="min-h-[300px] font-serif text-lg leading-relaxed p-6 resize-none bg-white/50 focus:bg-white transition-colors"
+                        className="w-full min-h-[120px] max-h-[500px] font-serif text-lg leading-relaxed p-6 resize-none bg-white/50 focus:bg-white transition-colors rounded-md border border-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                     />
@@ -128,7 +137,7 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="voice" className="min-h-[300px] flex flex-col items-center justify-center space-y-6 border-2 border-dashed rounded-xl bg-muted/10">
+                <TabsContent value="voice" className="flex flex-col items-center justify-center space-y-6">
                     <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 ${isRecording ? 'bg-red-100 animate-pulse' : 'bg-primary/10'}`}>
                         <Mic className={`w-10 h-10 ${isRecording ? 'text-red-500' : 'text-primary'}`} />
                     </div>
@@ -161,19 +170,19 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
                     )}
                 </TabsContent>
 
-                <TabsContent value="image" className="min-h-[300px] flex flex-col items-center justify-center space-y-6 border-2 border-dashed rounded-xl bg-muted/10 relative">
+                <TabsContent value="image" className="flex flex-col items-center justify-center space-y-6 relative">
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.pdf"
                         className="hidden"
                         id="handwriting-upload"
                         onChange={handleFileUpload}
                     />
 
-                    {(state as any).handwritingImageUrl ? (
+                    {state.handwritingImageUrl ? (
                         <div className="relative w-full h-full min-h-[300px] p-4">
                             <img
-                                src={(state as any).handwritingImageUrl}
+                                src={state.handwritingImageUrl}
                                 alt="Uploaded Handwriting"
                                 className="w-full h-full object-contain rounded-lg"
                             />
@@ -181,7 +190,7 @@ export function MessageEditor({ value, onChange }: MessageEditorProps) {
                                 size="icon"
                                 variant="destructive"
                                 className="absolute top-2 right-2 rounded-full"
-                                onClick={() => updateState({ handwritingImageUrl: null } as any)}
+                                onClick={() => updateState({ handwritingImageUrl: null })}
                             >
                                 <X className="w-4 h-4" />
                             </Button>

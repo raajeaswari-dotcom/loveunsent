@@ -1,13 +1,23 @@
-import { v2 as cloudinary } from 'cloudinary';
-import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
+const { v2: cloudinary } = require('cloudinary');
+const fs = require('fs');
+const path = require('path');
 
-dotenv.config({ path: '.env.local' });
-
-// Configure Cloudinary
-// Make sure you have these environment variables set in your .env.local:
-// NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+// Load .env.local manually
+const envPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+        line = line.trim();
+        if (line && !line.startsWith('#')) {
+            const equalIndex = line.indexOf('=');
+            if (equalIndex > 0) {
+                const key = line.substring(0, equalIndex).trim();
+                const value = line.substring(equalIndex + 1).trim();
+                process.env[key] = value;
+            }
+        }
+    });
+}
 
 // Configure Cloudinary
 cloudinary.config({
@@ -16,20 +26,19 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const PUBLIC_DIR = path.join(process.cwd(), 'public');
+console.log('Cloud Name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME);
+console.log('API Key exists:', !!process.env.CLOUDINARY_API_KEY);
+console.log('API Secret exists:', !!process.env.CLOUDINARY_API_SECRET);
+
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const IMAGES_DIR = path.join(PUBLIC_DIR, 'images');
-const CLOUDINARY_ROOT_FOLDER = 'loveunsent'; // Root folder in Cloudinary
+const CLOUDINARY_ROOT_FOLDER = 'loveunsent';
 
-async function uploadFile(filePath: string, relativePath: string) {
+async function uploadFile(filePath, relativePath) {
     try {
-        // Construct the public_id (filename without extension, prefixed with folder path)
-        // Cloudinary folder structure will mirror local structure under 'loveunsent/images'
-        // e.g. public/images/occasions/love.png -> loveunsent/images/occasions/love
-
         const fileDir = path.dirname(relativePath);
         const fileName = path.basename(relativePath, path.extname(relativePath));
 
-        // Normalize path separators for Cloudinary (forward slashes)
         const cloudFolder = path.join(CLOUDINARY_ROOT_FOLDER, 'images', fileDir).split(path.sep).join('/');
         const publicId = `${cloudFolder}/${fileName}`;
 
@@ -43,11 +52,11 @@ async function uploadFile(filePath: string, relativePath: string) {
 
         console.log(`✅ Uploaded: ${result.secure_url}`);
     } catch (error) {
-        console.error(`❌ Failed to upload ${relativePath}:`, error);
+        console.error(`❌ Failed to upload ${relativePath}:`, error.message);
     }
 }
 
-async function processDirectory(directory: string) {
+async function processDirectory(directory) {
     const items = fs.readdirSync(directory);
 
     for (const item of items) {
@@ -57,7 +66,6 @@ async function processDirectory(directory: string) {
         if (stat.isDirectory()) {
             await processDirectory(fullPath);
         } else {
-            // Only process images
             if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item)) {
                 const relativePath = path.relative(IMAGES_DIR, fullPath);
                 await uploadFile(fullPath, relativePath);
@@ -71,6 +79,7 @@ async function main() {
 
     if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
         console.error('❌ Missing Cloudinary API keys. Please check your .env.local file.');
+        console.error('Required: CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME');
         process.exit(1);
     }
 

@@ -11,9 +11,11 @@ export async function POST(req: NextRequest) {
             return errorResponse('No file uploaded', 400);
         }
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            return errorResponse('Invalid file type', 400);
+        // Validate file type (images or PDFs)
+        const allowedTypes = ['image/', 'application/pdf'];
+        const isValid = allowedTypes.some(type => file.type.startsWith(type) || file.type === 'application/pdf');
+        if (!isValid) {
+            return errorResponse('Invalid file type. Only images and PDFs are allowed', 400);
         }
 
         // Convert file to base64

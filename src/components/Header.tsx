@@ -73,10 +73,10 @@ export default function Header() {
                 {/* Centered Navigation */}
                 <nav className="hidden md:flex items-center justify-center gap-1">
                     <Link
-                        href="/customize"
-                        className={`px-8 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/customize' || pathname === '/'
-                                ? 'bg-mocha text-white'
-                                : 'text-deep-brown hover:text-burgundy'
+                        href="/our-collection"
+                        className={`px-8 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/our-collection' || pathname === '/'
+                            ? 'bg-mocha text-white'
+                            : 'text-deep-brown hover:text-burgundy'
                             }`}
                     >
                         SHOP
@@ -84,8 +84,8 @@ export default function Header() {
                     <Link
                         href="/how-it-works"
                         className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/how-it-works'
-                                ? 'bg-mocha text-white'
-                                : 'text-deep-brown hover:text-burgundy'
+                            ? 'bg-mocha text-white'
+                            : 'text-deep-brown hover:text-burgundy'
                             }`}
                     >
                         HOW IT WORKS
