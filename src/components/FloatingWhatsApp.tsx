@@ -4,7 +4,7 @@ import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function FloatingWhatsApp() {
-    const phoneNumber = "919876543210"; // Replace with actual number
+    const phoneNumber = "919943376279"; // India WhatsApp number
     const message = encodeURIComponent("Hi, I want to send a handwritten letter.");
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
 

@@ -85,7 +85,7 @@ export default function HowItWorks() {
 function StepCard({ icon: Icon, step, title, description, delay }: { icon: any, step: string, title: string, description: string, delay: number }) {
     return (
         <div
-            className="bg-white p-8 rounded-2xl shadow-lg border border-primary/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group relative"
+            className="bg-transparent p-8 rounded-2xl shadow-lg border border-primary/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group relative"
             style={{ animationDelay: `${delay}ms` }}
         >
             <div className="w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors mx-auto md:mx-0">

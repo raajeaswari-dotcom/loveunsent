@@ -60,7 +60,7 @@ export default function Home() {
       <OurCollection />
 
       {/* How It Works Section */}
-      <section className="py-20 bg-transparent">
+      <section id="how-it-works" className="py-20 bg-[#DBCDBE]">
         <div className="container px-4">
           <h2 className="text-4xl font-bold text-center mb-16 text-[#511317]">How It Works</h2>
 

@@ -91,8 +91,8 @@ export default function Header() {
                         BUNDLE LETTERS
                     </Link>
                     <Link
-                        href="/how-it-works"
-                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/how-it-works'
+                        href="/#how-it-works"
+                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/#how-it-works'
                             ? 'bg-mocha text-white'
                             : 'text-deep-brown hover:text-burgundy'
                             }`}
