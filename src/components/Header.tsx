@@ -25,7 +25,7 @@ export default function Header() {
                 <div className="relative flex items-center justify-center mb-4">
                     {/* Logo Centered */}
                     <Link href="/" className="flex items-center gap-2">
-                        <span className="font-display text-3xl font-bold text-deep-brown tracking-tight">Love Unsent</span>
+                        <img src="/logo.svg" alt="Love Unsent" className="h-9" />
                     </Link>
 
                     {/* Right Icons */}
@@ -80,6 +80,15 @@ export default function Header() {
                             }`}
                     >
                         SHOP
+                    </Link>
+                    <Link
+                        href="/customize-bundle"
+                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/customize-bundle'
+                            ? 'bg-mocha text-white'
+                            : 'text-deep-brown hover:text-burgundy'
+                            }`}
+                    >
+                        BUNDLE LETTERS
                     </Link>
                     <Link
                         href="/how-it-works"

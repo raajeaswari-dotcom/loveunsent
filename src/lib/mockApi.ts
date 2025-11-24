@@ -3,6 +3,13 @@
 import { getCloudinaryUrl } from "@/lib/cloudinaryClient";
 
 export const mockPapers = [
+    {
+        id: "ordinary",
+        name: "Ordinary Paper",
+        price: 0,
+        image: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?q=80&w=1974&auto=format&fit=crop",
+        description: "Simple, classic paper for your heartfelt words.",
+    },
     { id: 'p1', name: 'Premium Ivory Paper', type: 'paper', price: 150, image: getCloudinaryUrl('/images/paper-ivory.png'), description: 'Luxurious ivory paper, 120gsm.' },
     { id: 'p2', name: 'Vintage Parchment', type: 'paper', price: 200, image: getCloudinaryUrl('/images/paper-parchment.png'), description: 'Aged look for a classic feel.' },
 ];

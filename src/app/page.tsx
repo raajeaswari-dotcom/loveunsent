@@ -13,23 +13,22 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F5EFE7]">
       {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-[#C4A68A]">
+      <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-[#A37B65]">
         <div className="container px-4 py-16 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Text Content */}
             <div className="space-y-8">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight text-white">
-                WRITE<br />
-                HEARTFELT<br />
-                LETTERS
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-nighty tracking-tight leading-tight text-white">
+                Say it<br />
+                with ink ❤️
               </h1>
 
               <Link href="/customize">
                 <Button
                   size="lg"
-                  className="h-12 px-8 rounded-full text-sm font-bold bg-[#5C2E2E] text-white hover:bg-[#4A2424] shadow-lg transition-all duration-300"
+                  className="h-12 px-8 rounded-full text-lg font-extralight bg-[rgb(81,19,23)] text-white hover:bg-[#4A2424] shadow-lg transition-all duration-300"
                 >
-                  SHOP ALL LETTERS
+                  Write Your Letter
                 </Button>
               </Link>
             </div>
@@ -54,47 +53,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Divider Section */}
+      <section className="h-[50px] bg-[#511317]"></section>
+
       {/* Our Collection Section */}
       <OurCollection />
 
       {/* How It Works Section */}
       <section className="py-20 bg-[#F5EFE7]">
         <div className="container px-4">
-          <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">How It Works</h2>
+          <h2 className="text-4xl font-bold text-center mb-16 text-[#511317]">How It Works</h2>
 
           <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             <div className="text-center">
-              <div className="w-32 h-32 rounded-full bg-[#5C2E2E] flex items-center justify-center mx-auto mb-6">
+              <div className="w-32 h-32 rounded-full bg-[rgb(81,19,23)] flex items-center justify-center mx-auto mb-6">
                 <PenTool className="w-12 h-12 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">You write your words</h3>
-              <p className="text-gray-600 text-sm">Write a letter for the person</p>
+              <h3 className="font-bold text-lg mb-2 text-[#511317]">You write your words</h3>
+              <p className="text-[#511317] text-sm">Write a letter for the person</p>
             </div>
 
             <div className="text-center">
-              <div className="w-32 h-32 rounded-full bg-[#5C2E2E] flex items-center justify-center mx-auto mb-6">
+              <div className="w-32 h-32 rounded-full bg-[rgb(81,19,23)] flex items-center justify-center mx-auto mb-6">
                 <Heart className="w-12 h-12 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">We craft with love</h3>
-              <p className="text-gray-600 text-sm">Each letter is handwritten with care</p>
+              <h3 className="font-bold text-lg mb-2 text-[#511317]">We craft with love</h3>
+              <p className="text-[#511317] text-sm">Each letter is handwritten with care</p>
             </div>
 
             <div className="text-center">
-              <div className="w-32 h-32 rounded-full bg-[#5C2E2E] flex items-center justify-center mx-auto mb-6">
+              <div className="w-32 h-32 rounded-full bg-[rgb(81,19,23)] flex items-center justify-center mx-auto mb-6">
                 <Send className="w-12 h-12 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Delivered to the person</h3>
-              <p className="text-gray-600 text-sm">We deliver to the receiver</p>
+              <h3 className="font-bold text-lg mb-2 text-[#511317]">Delivered to the person</h3>
+              <p className="text-[#511317] text-sm">We deliver to the receiver</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Newsletter Signup Section */}
-      <section className="py-20 bg-[#C4A68A]">
+      <section className="py-20 bg-[#D79A79]">
         <div className="container px-4 max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4 text-white">Newsletter Signup</h2>
-          <p className="text-white/90 mb-8">
+          <h2 className="text-3xl font-bold mb-4 text-[#2C1B13]">Newsletter Signup</h2>
+          <p className="text-[#2C1B13]/90 mb-8">
             Subscribe today! Get the latest news and stay updated about our new products and special offers.
           </p>
 
@@ -105,7 +107,7 @@ export default function Home() {
               className="h-12 rounded-full bg-white/90 border-none"
             />
             <Button
-              className="h-12 px-8 rounded-full bg-[#5C2E2E] hover:bg-[#4A2424] text-white font-bold"
+              className="h-12 px-8 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight"
             >
               Enter
             </Button>
@@ -161,9 +163,9 @@ function OurCollection() {
 
 
   return (
-    <section className="py-20 bg-[#F5EFE7]">
+    <section className="py-20 bg-transparent">
       <div className="container px-4">
-        <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">Our Collection</h2>
+        <h2 className="text-4xl font-nighty text-center mb-16 text-[#511317]">Our Collection</h2>
 
         <div
           className="relative max-w-6xl mx-auto"
@@ -195,7 +197,7 @@ function OurCollection() {
             {collections.map((collection, index) => (
               <div
                 key={index}
-                className="min-w-[350px] bg-white border-2 border-gray-100 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
+                className="min-w-[350px] bg-transparent border-2 border-gray-100 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
               >
                 <div className="h-48 overflow-hidden relative">
                   <img
@@ -206,13 +208,13 @@ function OurCollection() {
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
                 </div>
                 <div className="p-6 flex flex-col flex-1">
-                  <h3 className="text-xl font-bold mb-3 text-gray-900">{collection.title}</h3>
-                  <p className="text-gray-600 text-sm mb-6 flex-1 leading-relaxed">
+                  <h3 className="text-xl font-bold mb-3 text-[#511317] font-gorditas">{collection.title}</h3>
+                  <p className="text-[#511317] text-sm mb-6 flex-1 leading-relaxed">
                     {collection.description}
                   </p>
                   <Link href="/customize" className="mt-auto">
                     <Button
-                      className="w-full h-10 rounded-full bg-[#5C2E2E] hover:bg-[#4A2424] text-white font-semibold text-sm"
+                      className="w-full h-10 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight text-sm"
                     >
                       CUSTOMIZE
                     </Button>

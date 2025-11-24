@@ -101,7 +101,7 @@ export default function OccasionsPage() {
                                     </div>
                                     <div className="p-6">
                                         <p className="text-gray-700 mb-4">{occasion.description}</p>
-                                        <Button className="w-full h-12 rounded-full bg-[#5C2E2E] hover:bg-[#4A2424] text-white font-bold">
+                                        <Button className="w-full h-12 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight">
                                             Customize Now
                                         </Button>
                                     </div>

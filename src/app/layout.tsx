@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Jost, Gorditas } from "next/font/google";
+import { Jost } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -7,15 +8,14 @@ import { Footer } from "@/components/Footer";
 const jost = Jost({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["200", "300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
 });
 
-const gorditas = Gorditas({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  style: ["normal"],
+const gorditas = localFont({
+  src: "../../public/fonts/gorditas.regular.ttf",
+  variable: "--font-gorditas",
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${jost.className} ${gorditas.variable} antialiased flex flex-col min-h-screen`}
+        className={`${jost.className} ${gorditas.variable} antialiased flex flex-col min-h-screen font-extralight`}
       >
         <CartProvider>
           <AuthProvider>

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Nighty Demo';
+  src: url('/fonts/Nighty DEMO.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 @layer base {
   :root {
     /* Light Mocha #A37B65 - Main body background */

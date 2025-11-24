@@ -19,9 +19,11 @@ const config = {
         },
         extend: {
             fontFamily: {
-                'serif': ['var(--font-heading)', 'serif'],
+                'serif': ['var(--font-body)', 'sans-serif'],
                 'sans': ['var(--font-body)', 'sans-serif'],
-                'display': ['var(--font-heading)', 'serif'],
+                'display': ['var(--font-body)', 'sans-serif'],
+                'nighty': ['"Nighty Demo"', 'serif'],
+                'gorditas': ['var(--font-gorditas)', 'cursive'],
             },
             colors: {
                 border: "hsl(var(--border))",
