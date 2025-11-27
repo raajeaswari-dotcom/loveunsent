@@ -24,6 +24,7 @@ const config = {
                 'display': ['var(--font-body)', 'sans-serif'],
                 'nighty': ['"Nighty Demo"', 'serif'],
                 'gorditas': ['var(--font-gorditas)', 'cursive'],
+                'retro-wild': ['"Retro Wild"', 'serif'],
             },
             colors: {
                 border: "hsl(var(--border))",

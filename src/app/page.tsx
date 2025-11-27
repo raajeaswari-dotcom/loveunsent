@@ -13,40 +13,35 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F5EFE7]">
       {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-[#A37B65]">
-        <div className="container px-4 py-16 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className="relative min-h-[50vh] flex items-center overflow-hidden bg-[#A37B65]">
+        <div className="container px-4 py-8 relative z-10">
+          <div className="grid lg:grid-cols-[40%_60%] gap-12 items-center">
             {/* Left: Text Content */}
-            <div className="space-y-8">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-nighty tracking-tight leading-tight text-white">
-                Say it<br />
-                with ink ❤️
+            <div className="space-y-20">
+              <h1 className="text-3xl lg:text-5xl font-bold font-gorditas tracking-wider leading-tight text-[rgb(243,233,221)]">
+                WRITE<br />
+                HEARTFELT<br />
+                LETTERS
               </h1>
 
-              <Link href="/customize">
+              <Link href="/our-collection">
                 <Button
-                  size="lg"
-                  className="h-12 px-8 rounded-full text-lg font-extralight bg-[rgb(81,19,23)] text-white hover:bg-[#4A2424] shadow-lg transition-all duration-300"
+                  size="sm"
+                  className="h-8 px-4 rounded-full text-xs font-extralight bg-[rgb(81,19,23)] text-white hover:bg-[#4A2424] shadow-lg transition-all duration-300"
                 >
-                  Write Your Letter
+                  SHOP ALL LETTERS
                 </Button>
               </Link>
             </div>
 
-            {/* Right: Image/Video */}
+            {/* Right: Image */}
             <div className="relative">
-              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-[400px] object-cover"
-                  poster={getCloudinaryUrl("/images/hero-letter.png")}
-                >
-                  <source src="https://cdn.coverr.co/videos/coverr-writing-a-letter-with-a-fountain-pen-5364/1080p.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+              <div className="relative overflow-hidden rounded-2xl shadow-2xl bg-[#F5EFE7] p-8 h-[400px] flex items-center justify-center">
+                <img
+                  src={getCloudinaryUrl("/images/hero-letter.png")}
+                  alt="Handwritten Letters"
+                  className="w-full h-full object-contain transform hover:scale-105 transition-transform duration-500"
+                />
               </div>
             </div>
           </div>
@@ -163,7 +158,7 @@ function OurCollection() {
 
 
   return (
-    <section className="py-20 bg-transparent">
+    <section className="pt-10 pb-20 bg-transparent">
       <div className="container px-4">
         <h2 className="text-4xl font-nighty text-center mb-16 text-[#511317]">Our Collection</h2>
 

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Menu } from 'lucide-react';
+import { ShoppingCart, Menu, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
@@ -22,28 +22,53 @@ export default function Header() {
     return (
         <header className="sticky top-0 z-50 w-full bg-cream border-b border-primary/5">
             <div className="container pt-4 pb-0">
-                <div className="relative flex items-center justify-center mb-4">
+                <div className="flex items-center justify-center mb-2">
                     {/* Logo Centered */}
                     <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.svg" alt="Love Unsent" className="h-9" />
+                        <img src="/logo.svg" alt="Love Unsent" className="h-4" />
                     </Link>
+                </div>
+
+                {/* Bottom Row: Navigation + Icons */}
+                <div className="relative flex items-center justify-center min-h-[32px]">
+                    {/* Centered Navigation */}
+                    <nav className="hidden md:flex items-center justify-center gap-1">
+                        <Link
+                            href="/our-collection"
+                            className={`px-4 py-1 text-xs font-medium tracking-wide rounded-t-[5px] transition-colors ${pathname === '/our-collection' || pathname === '/'
+                                ? 'bg-mocha text-white'
+                                : 'text-deep-brown hover:text-burgundy'
+                                }`}
+                        >
+                            SHOP
+                        </Link>
+                        <Link
+                            href="/#how-it-works"
+                            className={`px-3 py-1 text-xs font-medium tracking-wide rounded-t-[5px] transition-colors ${pathname === '/#how-it-works'
+                                ? 'bg-mocha text-white'
+                                : 'text-deep-brown hover:text-burgundy'
+                                }`}
+                        >
+                            HOW IT WORKS
+                        </Link>
+                    </nav>
 
                     {/* Right Icons */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-4">
+                    <div className="absolute -right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         {!loading && (
-                            <div className="hidden md:flex items-center gap-4">
+                            <div className="hidden md:flex items-center gap-1">
                                 {user ? (
                                     <Link href="/orders">
-                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy">
+                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy h-8 w-8">
                                             <span className="sr-only">Account</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                            <User className="h-4 w-4" />
                                         </Button>
                                     </Link>
                                 ) : (
                                     <Link href="/login">
-                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy">
+                                        <Button variant="ghost" size="icon" className="text-deep-brown hover:text-burgundy h-8 w-8">
                                             <span className="sr-only">Login</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                            <User className="h-4 w-4" />
                                         </Button>
                                     </Link>
                                 )}
@@ -53,53 +78,22 @@ export default function Header() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="relative text-deep-brown hover:text-burgundy"
+                            className="relative text-deep-brown hover:text-burgundy h-8 w-8"
                             onClick={() => setIsCartOpen(true)}
                         >
-                            <ShoppingCart className="h-5 w-5" />
+                            <ShoppingCart className="h-4 w-4" />
                             {itemCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-burgundy text-white text-[10px] flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-burgundy text-white text-[8px] flex items-center justify-center">
                                     {itemCount}
                                 </span>
                             )}
                         </Button>
 
-                        <Button variant="ghost" size="icon" className="md:hidden text-deep-brown">
-                            <Menu className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" className="md:hidden text-deep-brown h-8 w-8">
+                            <Menu className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
-
-                {/* Centered Navigation */}
-                <nav className="hidden md:flex items-center justify-center gap-1">
-                    <Link
-                        href="/our-collection"
-                        className={`px-8 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/our-collection' || pathname === '/'
-                            ? 'bg-mocha text-white'
-                            : 'text-deep-brown hover:text-burgundy'
-                            }`}
-                    >
-                        SHOP
-                    </Link>
-                    <Link
-                        href="/customize-bundle"
-                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/customize-bundle'
-                            ? 'bg-mocha text-white'
-                            : 'text-deep-brown hover:text-burgundy'
-                            }`}
-                    >
-                        BUNDLE LETTERS
-                    </Link>
-                    <Link
-                        href="/#how-it-works"
-                        className={`px-6 py-2 text-sm font-bold tracking-wide rounded-t-lg transition-colors ${pathname === '/#how-it-works'
-                            ? 'bg-mocha text-white'
-                            : 'text-deep-brown hover:text-burgundy'
-                            }`}
-                    >
-                        HOW IT WORKS
-                    </Link>
-                </nav>
             </div>
         </header>
     );

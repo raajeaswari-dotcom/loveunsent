@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Jost } from "next/font/google";
-import localFont from "next/font/local";
+import { Jost, Gorditas } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -12,10 +11,10 @@ const jost = Jost({
   style: ["normal", "italic"],
 });
 
-const gorditas = localFont({
-  src: "../../public/fonts/gorditas.regular.ttf",
+const gorditas = Gorditas({
   variable: "--font-gorditas",
-  weight: "400",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
