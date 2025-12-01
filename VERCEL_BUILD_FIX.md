@@ -1,140 +1,183 @@
-# Vercel Build Fix - Import Path Errors
+# Vercel Build Fixes - Complete Summary
 
-## Issues Fixed
+## All Issues Fixed ✅
 
-### 1. Incorrect Import Paths for AuthContext
-**Error**: `Module not found: Can't resolve '@/src/context/AuthContext'`
+### Issue 1: Incorrect Import Paths (@/src/ instead of @/)
+**Root Cause**: The `@` alias in `tsconfig.json` already points to `src/`, so `@/src/` creates a double path.
 
 **Files Fixed**:
-- ✅ `src/app/admin/dashboard/page.tsx`
-- ✅ `src/app/qc/page.tsx`
-- ✅ `src/app/super-admin/dashboard/page.tsx`
-- ✅ `src/app/writer/orders/page.tsx`
+1. ✅ `src/app/admin/dashboard/page.tsx`
+2. ✅ `src/app/qc/page.tsx`
+3. ✅ `src/app/super-admin/dashboard/page.tsx`
+4. ✅ `src/app/writer/orders/page.tsx`
+5. ✅ `src/lib/otp.ts`
+6. ✅ `src/app/api/auth/verify-otp/route.ts`
+7. ✅ `src/app/api/admin/auth/verify-otp/route.ts`
 
-**Change**:
+**Changes Made**:
 ```typescript
-// Before (WRONG)
+// BEFORE (WRONG)
 import { useAuth } from "@/src/context/AuthContext";
+import { OTP } from "@/src/models/OTP";
+import dbConnect from "@/src/lib/dbConnect";
 
-// After (CORRECT)
+// AFTER (CORRECT)
 import { useAuth } from "@/context/AuthContext";
+import { OTP } from "@/models/OTP";
+import dbConnect from "@/lib/db";
 ```
 
-**Reason**: The `@` alias in `tsconfig.json` already points to `src/`, so using `@/src/` creates a double path like `src/src/context/AuthContext`.
-
-### 2. Missing Switch Component
+### Issue 2: Missing Switch Component
 **Error**: `Module not found: Can't resolve '@/components/ui/switch'`
 
-**File Fixed**:
-- ✅ Created `src/components/ui/switch.tsx`
+**Solution**: Created `src/components/ui/switch.tsx` with Radix UI primitives
 
-**Solution**: Created the missing Switch component using Radix UI primitives.
+### Issue 3: Missing setAuthCookie Function
+**Error**: `'setAuthCookie' is not exported from '@/lib/auth'`
 
-## Root Cause
+**Solution**: Added `setAuthCookie` function to `src/lib/auth.ts`
 
-The import path errors occurred because:
-1. Some files used `@/src/context/AuthContext` instead of `@/context/AuthContext`
-2. The `@` alias in `tsconfig.json` is configured as:
-   ```json
-   {
-     "compilerOptions": {
-       "paths": {
-         "@/*": ["./src/*"]
-       }
-     }
-   }
-   ```
-3. This means `@/` already resolves to `src/`, so `@/src/` becomes `src/src/`
-
-## How to Prevent This
-
-### Correct Import Patterns:
 ```typescript
-// ✅ CORRECT
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { User } from "@/models/User";
-import { connectDB } from "@/lib/db";
-
-// ❌ WRONG
-import { useAuth } from "@/src/context/AuthContext";
-import { Button } from "@/src/components/ui/button";
+export function setAuthCookie(response: NextResponse, user: any) {
+    const token = signJwt({ 
+        userId: user._id || user.id, 
+        role: user.role,
+        email: user.email 
+    });
+    
+    response.cookies.set("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+    
+    return response;
+}
 ```
 
-### Rule of Thumb:
-- `@/` = `src/`
-- Never use `@/src/` (double path)
-- Always use `@/` followed by the path relative to `src/`
+### Issue 4: TypeScript Error in reset_password.ts
+**Error**: `Argument of type 'string | undefined' is not assignable to parameter of type 'string'`
 
-## Testing Locally Before Deployment
+**Solution**: Added type assertion
 
-### Run Build Locally:
-```bash
-npm run build
-```
+```typescript
+// BEFORE
+await mongoose.connect(MONGODB_URI);
 
-This will catch import errors before pushing to Vercel.
-
-### Check for Import Issues:
-```bash
-# Search for incorrect imports
-grep -r "@/src/" src/
+// AFTER
+await mongoose.connect(MONGODB_URI as string);
 ```
 
 ## Files Modified
 
-1. **src/app/admin/dashboard/page.tsx** - Fixed import
-2. **src/app/qc/page.tsx** - Fixed import
-3. **src/app/super-admin/dashboard/page.tsx** - Fixed import
-4. **src/app/writer/orders/page.tsx** - Fixed import
-5. **src/components/ui/switch.tsx** - Created component
+### Import Path Fixes:
+1. `src/app/admin/dashboard/page.tsx`
+2. `src/app/qc/page.tsx`
+3. `src/app/super-admin/dashboard/page.tsx`
+4. `src/app/writer/orders/page.tsx`
+5. `src/lib/otp.ts`
+6. `src/app/api/auth/verify-otp/route.ts`
+7. `src/app/api/admin/auth/verify-otp/route.ts`
 
-## Next Steps
+### New Files Created:
+1. `src/components/ui/switch.tsx`
 
-### 1. Commit the Fixes:
-```bash
-git add .
-git commit -m "Fix: Vercel build errors - correct import paths and add Switch component"
-git push
+### Enhanced Files:
+1. `src/lib/auth.ts` - Added `setAuthCookie` function
+2. `reset_password.ts` - Fixed TypeScript error
+
+## Correct Import Pattern Reference
+
+### ✅ CORRECT:
+```typescript
+import { User } from "@/models/User";
+import { OTP } from "@/models/OTP";
+import dbConnect from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { signJwt } from "@/lib/auth";
 ```
 
-### 2. Vercel Will Auto-Deploy:
-Vercel will automatically detect the new commit and start a new build.
+### ❌ WRONG:
+```typescript
+import { User } from "@/src/models/User";
+import { OTP } from "@/src/models/OTP";
+import dbConnect from "@/src/lib/db";
+import { useAuth } from "@/src/context/AuthContext";
+```
 
-### 3. Monitor Build:
-Check your Vercel dashboard to ensure the build succeeds.
+## Why This Happened
 
-## Additional Checks
+The `tsconfig.json` has:
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
 
-### Search for Other Potential Issues:
+This means:
+- `@/` → `src/`
+- `@/models/User` → `src/models/User` ✅
+- `@/src/models/User` → `src/src/models/User` ❌
+
+## Prevention
+
+### Before Pushing to Vercel:
 ```bash
-# Check for any remaining @/src/ imports
+# 1. Run build locally
+npm run build
+
+# 2. Check for import errors
 grep -r "@/src/" src/
 
-# Check for missing UI components
-grep -r "@/components/ui/" src/ | grep "import"
+# 3. Fix any found errors
 ```
 
-## Status
-✅ **FIXED**
+### VS Code Settings:
+Add to `.vscode/settings.json`:
+```json
+{
+  "typescript.preferences.importModuleSpecifier": "non-relative"
+}
+```
 
-All import path errors have been corrected and the missing Switch component has been created. The build should now succeed on Vercel.
+## Build Status
+
+✅ All import path errors fixed
+✅ Missing components created
+✅ Missing functions added
+✅ TypeScript errors resolved
+
+**Next Vercel build should succeed!**
 
 ## Commit Message
 
 ```bash
-git commit -m "Fix: Vercel build errors
+git add .
+git commit -m "Fix: All Vercel build errors resolved
 
-- Fixed incorrect import paths (@/src/ → @/)
-- Created missing Switch UI component
-- Updated 4 dashboard pages with correct imports
+Import Path Fixes:
+- Fixed @/src/ to @/ in 7 files
+- Corrected model imports (named exports)
+- Fixed dbConnect path (db not dbConnect)
 
-Fixes:
-- admin/dashboard/page.tsx
-- qc/page.tsx
-- super-admin/dashboard/page.tsx
-- writer/orders/page.tsx
+New Components:
+- Added Switch UI component
 
-Added:
-- components/ui/switch.tsx"
+Enhanced Functions:
+- Added setAuthCookie to auth.ts
+- Fixed reset_password.ts TypeScript error
+
+All builds should now succeed on Vercel ✅"
+
+git push
 ```
+
+## Status: ✅ READY FOR DEPLOYMENT
+
+All build errors have been resolved. The next Vercel deployment should succeed!
