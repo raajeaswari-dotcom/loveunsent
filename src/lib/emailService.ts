@@ -42,8 +42,13 @@ class ResendService implements EmailService {
         }
 
         try {
+            console.log('🔍 [Resend] Attempting to send OTP email...');
+            console.log('📧 [Resend] To:', email);
+            console.log('🔑 [Resend] API Key present:', !!process.env.RESEND_API_KEY);
+            console.log('📬 [Resend] From address:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
+
             const { data, error } = await this.resend.emails.send({
-                from: process.env.EMAIL_FROM || 'Love Unsent <onboarding@resend.dev>',
+                from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
                 to: email,
                 subject: 'Your Love Unsent Verification Code',
                 html: `
@@ -80,15 +85,19 @@ class ResendService implements EmailService {
             });
 
             if (error) {
-                console.error('❌ Resend API error:', error);
+                console.error('❌ [Resend] API error:', JSON.stringify(error, null, 2));
+                console.error('❌ [Resend] Error details:', error);
                 return false;
             }
 
-            console.log('✅ Email OTP sent successfully via Resend to:', email);
-            console.log('📧 Message ID:', data?.id);
+            console.log('✅ [Resend] Email OTP sent successfully to:', email);
+            console.log('📧 [Resend] Message ID:', data?.id);
             return true;
-        } catch (error) {
-            console.error('❌ Failed to send email OTP via Resend:', error);
+        } catch (error: any) {
+            console.error('❌ [Resend] Exception caught while sending email OTP');
+            console.error('❌ [Resend] Error type:', error?.constructor?.name);
+            console.error('❌ [Resend] Error message:', error?.message);
+            console.error('❌ [Resend] Full error:', JSON.stringify(error, null, 2));
             return false;
         }
     }
