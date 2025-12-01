@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { setAuthCookie } from '@/src/lib/auth';
-import { validateOtpAndGetUser } from '@/src/lib/otp'; // we'll create a simple checker that can be adapted
+import { setAuthCookie } from '@/lib/auth';
+import { validateOtpAndGetUser } from '@/lib/otp';
 
 export async function POST(req: Request) {
   try {

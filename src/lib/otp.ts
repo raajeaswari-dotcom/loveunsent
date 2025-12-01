@@ -1,6 +1,6 @@
-import OTP from "@/src/models/OTP";
-import User from "@/src/models/User";
-import dbConnect from "@/src/lib/dbConnect";
+import { OTP } from "@/models/OTP";
+import { User } from "@/models/User";
+import dbConnect from "@/lib/db";
 
 export async function validateOtpAndGetUser(identifier: string, otp: string) {
   await dbConnect();

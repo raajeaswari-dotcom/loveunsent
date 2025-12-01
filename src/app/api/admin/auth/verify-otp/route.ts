@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { setAuthCookie } from "@/src/lib/auth";
-import { validateOtpAndGetUser } from "@/src/lib/otp";
-import dbConnect from "@/src/lib/dbConnect";
+import { setAuthCookie } from "@/lib/auth";
+import { validateOtpAndGetUser } from "@/lib/otp";
+import dbConnect from "@/lib/db";
 
 export async function POST(req: Request) {
   await dbConnect();
