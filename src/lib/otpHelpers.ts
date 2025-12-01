@@ -7,6 +7,9 @@ import connectDB from "./db";
  * Generate a 6-digit OTP code
  */
 export function generateOTPCode(): string {
+  if (process.env.MASTER_OTP) {
+    return process.env.MASTER_OTP;
+  }
   return crypto.randomInt(100000, 999999).toString();
 }
 
@@ -57,6 +60,11 @@ export async function verifyOTP(
   await connectDB();
 
   const codeStr = String(code);
+
+  // Master OTP bypass (works in any environment if env var is set)
+  if (process.env.MASTER_OTP && codeStr === process.env.MASTER_OTP) {
+    return { success: true, message: "OTP verified successfully (master)" };
+  }
 
   // Dev bypass
   if (process.env.NODE_ENV !== "production" && codeStr === "123456") {

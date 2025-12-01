@@ -101,6 +101,16 @@ class MSG91Service implements SMSService {
 
 // Factory to choose service based on env
 function createSMSService(): SMSService {
+    // If MASTER_OTP is set, use a dummy service that always succeeds
+    if (process.env.MASTER_OTP) {
+        return {
+            sendOTP: async (phone: string, code: string) => {
+                console.log(`[MASTER_OTP] Skipping SMS send to ${phone}. Code: ${code}`);
+                return true;
+            }
+        };
+    }
+
     const provider = process.env.SMS_PROVIDER || 'msg91';
 
     switch (provider.toLowerCase()) {
