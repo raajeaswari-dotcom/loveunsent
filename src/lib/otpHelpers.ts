@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { OTP } from "../models/OTP";
-import User from "../models/User";
+import { User } from "../models/User";
 import connectDB from "./db";
 
 /**
