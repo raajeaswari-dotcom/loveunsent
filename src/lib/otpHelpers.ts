@@ -61,8 +61,12 @@ export async function verifyOTP(
 
   const codeStr = String(code);
 
+  console.log(`[VerifyOTP] Verifying for: ${identifier}, Channel: ${channel}, Input: ${codeStr}`);
+  console.log(`[VerifyOTP] MASTER_OTP env var: ${process.env.MASTER_OTP ? 'SET' : 'NOT SET'}`);
+
   // Master OTP bypass (works in any environment if env var is set)
   if (process.env.MASTER_OTP && codeStr === process.env.MASTER_OTP) {
+    console.log('[VerifyOTP] Master OTP matched!');
     return { success: true, message: "OTP verified successfully (master)" };
   }
 
@@ -78,6 +82,8 @@ export async function verifyOTP(
     verified: false,
     expiresAt: { $gt: new Date() },
   }).sort({ createdAt: -1 });
+
+  console.log(`[VerifyOTP] DB Lookup Result: ${otp ? 'FOUND' : 'NOT FOUND'}`);
 
   if (!otp) {
     return { success: false, message: "Invalid or expired OTP" };
