@@ -399,7 +399,7 @@ export default function AuthPage() {
                                     {otp.map((digit, index) => (
                                         <Input
                                             key={index}
-                                            ref={(el) => (otpRefs.current[index] = el)}
+                                            ref={(el) => { otpRefs.current[index] = el; }}
                                             type="text"
                                             inputMode="numeric"
                                             maxLength={1}
