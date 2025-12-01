@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     if (!decoded) return NextResponse.json({ user: null });
 
     const userId = decoded.userId || decoded.id;
-    const user = await User.findById(userId).lean();
+    const user = await User.findById(userId).lean() as any;
     if (!user) return NextResponse.json({ user: null });
 
     return NextResponse.json({
