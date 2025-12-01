@@ -5,6 +5,7 @@ import { Paper } from '@/models/Paper';
 import { Handwriting } from '@/models/Handwriting';
 import { Perfume } from '@/models/Perfume';
 import { Addon } from '@/models/Addon';
+import { User } from '@/models/User';
 import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/utils/apiResponse';
 import { z } from 'zod';
@@ -45,6 +46,27 @@ export async function POST(req: NextRequest) {
         if (!token) return errorResponse('Unauthorized', 401);
         const decoded: any = verifyToken(token);
         if (!decoded) return errorResponse('Invalid Token', 401);
+
+        // Amazon-style: Check email verification before allowing order
+        const userId = decoded.userId || decoded.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return errorResponse('User not found', 404);
+        }
+
+        // Require email verification for placing orders (Amazon approach)
+        if (!user.emailVerified && !user.phoneVerified) {
+            return errorResponse(
+                'Please verify your email or phone number to place orders. This helps us send you order confirmations and updates.',
+                403,
+                {
+                    requiresVerification: true,
+                    email: user.email,
+                    phone: user.phone
+                }
+            );
+        }
 
         const body = await req.json();
         const result = createOrderSchema.safeParse(body);

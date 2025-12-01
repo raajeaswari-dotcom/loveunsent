@@ -1,37 +1,41 @@
-import { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { successResponse, errorResponse } from '@/utils/apiResponse';
-import connectDB from '@/lib/db';
-import { User } from '@/models/User';
 
-export async function GET(req: NextRequest) {
-    try {
-        await connectDB();
-        const token = req.cookies.get('token')?.value;
+import { NextResponse } from "next/server";
+import { verifyToken } from "../../../../lib/auth";
+import { User } from "../../../../models/User";
+import connectDB from "../../../../lib/db";
 
-        if (!token) {
-            return errorResponse('Not authenticated', 401);
-        }
+export async function GET(req: Request) {
+  await connectDB();
 
-        const decoded: any = verifyToken(token);
-        if (!decoded) {
-            return errorResponse('Invalid token', 401);
-        }
+  const cookieHeader = req.headers.get("cookie");
+  const token = cookieHeader
+    ?.split("; ")
+    .find((row) => row.startsWith("token="))
+    ?.split("=")[1];
 
-        const user = await User.findById(decoded.userId).select('-password');
-        if (!user) {
-            return errorResponse('User not found', 404);
-        }
+  if (!token) {
+    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+  }
 
-        return successResponse({
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error: any) {
-        return errorResponse(error.message, 500);
-    }
+  try {
+    const decoded: any = await verifyToken(token);
+    if (!decoded) return NextResponse.json({ user: null });
+
+    const userId = decoded.userId || decoded.id;
+    const user = await User.findById(userId).lean();
+    if (!user) return NextResponse.json({ user: null });
+
+    return NextResponse.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("ME ERROR:", err);
+    return NextResponse.json({ user: null });
+  }
 }

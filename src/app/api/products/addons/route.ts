@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     try {
         await connectDB();
-        const addons = await Addon.find({ isActive: true });
+        const addons = await Addon.find();
         return successResponse({ addons });
     } catch (error: any) {
         return errorResponse(error.message, 500);

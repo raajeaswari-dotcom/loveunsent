@@ -1,24 +1,29 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_change_me';
+const JWT_SECRET = process.env.JWT_SECRET || "DEV_SECRET";
 
-export function signToken(payload: any) {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+// Generate JWT
+export function signJwt(payload: object, expiresIn: string | number = "7d") {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 
+export const signToken = signJwt; // Alias for backward compatibility
+
+// Verify JWT
 export function verifyToken(token: string) {
     try {
         return jwt.verify(token, JWT_SECRET);
-    } catch (error) {
+    } catch (err) {
         return null;
     }
 }
 
 export async function hashPassword(password: string) {
-    return await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
 }
 
 export async function comparePassword(password: string, hash: string) {
-    return await bcrypt.compare(password, hash);
+    return bcrypt.compare(password, hash);
 }

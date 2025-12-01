@@ -1,36 +1,92 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { verifyToken } from './lib/auth'; // Note: Middleware runs in Edge runtime, might need 'jose' if jsonwebtoken fails. For now assuming Node runtime or compatible.
-// Actually, standard 'jsonwebtoken' might have issues in Edge. 
-// Let's use 'jose' for middleware compatibility if needed, but for this task I'll stick to the plan. 
-// If 'jsonwebtoken' fails in middleware, I'll switch to 'jose'.
-// For simplicity in this "backend architect" task, I will assume standard Node environment or that I can use 'jose' later.
-// Let's stick to a simple check for now.
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
-export function middleware(request: NextRequest) {
-    // 1. Check for specific protected routes
-    const path = request.nextUrl.pathname;
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "DEV_SECRET");
 
-    // Public routes
-    if (path.startsWith('/api/auth') || path.startsWith('/api/products') || path.startsWith('/api/upload')) {
-        return NextResponse.next();
-    }
+async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
-    // Protected routes
-    const token = request.cookies.get('token')?.value;
+// PUBLIC pages (no login required)
+const PUBLIC_PATHS = [
+  "/",  // Homepage
+  "/auth",  // New unified auth page
+  "/login",
+  "/register",
+  "/admin/login",
+  "/our-collection",
+  "/customize",
+  "/about",
+  "/contact",
+  "/terms",
+  "/privacy",
+  "/api/auth/send-otp",
+  "/api/auth/verify-otp",
+  "/api/auth/email/send-otp",
+  "/api/auth/email/verify-otp",
+  "/api/auth/mobile/send-otp",
+  "/api/auth/mobile/verify-otp",
+  "/api/admin/auth/verify-otp",
+  "/api/auth/me",
+  "/api/auth/logout",
+  "/api/products",  // Public product APIs
+  "/_next",
+  "/favicon.ico",
+  "/static",
+  "/images",
+];
 
-    if (!token && path.startsWith('/api/')) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
+export async function middleware(req: NextRequest) {
+  const url = req.nextUrl.clone();
+  const path = url.pathname;
 
-    // RBAC Logic (Simplified)
-    // In a real app, we'd decode the token here to check roles.
-    // Since 'jsonwebtoken' might not work in Edge Middleware, we often just check presence 
-    // and let the API route handle the fine-grained RBAC or use 'jose'.
-
+  // Skip middleware for public paths
+  if (PUBLIC_PATHS.some((p) => path.startsWith(p))) {
     return NextResponse.next();
+  }
+
+  const token = req.cookies.get("token")?.value;
+  if (!token) {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  const decoded: any = await verifyToken(token);
+  if (!decoded) {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Role-based protection
+  if (path.startsWith("/admin") && decoded.role !== "admin" && decoded.role !== "super_admin") {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (path.startsWith("/writer") && decoded.role !== "writer") {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (path.startsWith("/qc") && decoded.role !== "qc") {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (path.startsWith("/super-admin") && decoded.role !== "super_admin") {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-    matcher: '/api/:path*',
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

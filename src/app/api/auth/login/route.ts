@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid credentials', 401);
         }
 
-        const isMatch = await comparePassword(password, user.password);
+        const isMatch = await comparePassword(password, user.passwordHash);
         if (!isMatch) {
             return errorResponse('Invalid credentials', 401);
         }
@@ -35,7 +35,14 @@ export async function POST(req: NextRequest) {
         const token = signToken({ userId: user._id, role: user.role });
 
         const response = successResponse({ user: { id: user._id, name: user.name, email: user.email, role: user.role } });
-        response.cookies.set('token', token, { httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7 });
+        response.cookies.set('token', token, {
+            httpOnly: true,
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7,
+            sameSite: 'lax',
+            secure: false,
+            domain: 'localhost'
+        });
 
         return response;
     } catch (error: any) {

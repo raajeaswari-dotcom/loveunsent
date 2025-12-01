@@ -1,54 +1,38 @@
-import type { Metadata } from "next";
-import { Jost, Gorditas } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { AuthProvider } from "../context/AuthContext";
+import { CartProvider } from "../context/CartContext";
+import Header from "../components/Header";
+import { Footer } from "../components/Footer";
+import { ReactNode } from "react";
+import { Inter, Gorditas } from "next/font/google";
 
-const jost = Jost({
-  variable: "--font-body",
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  variable: "--font-body",
 });
 
 const gorditas = Gorditas({
-  variable: "--font-gorditas",
-  subsets: ["latin"],
   weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-gorditas",
 });
 
-export const metadata: Metadata = {
-  title: "Love Unsent - Personalized Handwritten Letters",
-  description: "Express your feelings with authentic handwritten letters. Choose your paper, handwriting style, and perfume.",
+export const metadata = {
+  title: "LoveUnsent",
+  description: "Write Heartfelt Letters",
 };
 
-import { CartProvider } from "@/context/CartContext";
-import { CustomizationProvider } from "@/context/CustomizationContext";
-import { AuthProvider } from "@/context/AuthContext";
-import { CartDrawer } from "@/components/CartDrawer";
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${jost.className} ${gorditas.variable} antialiased flex flex-col min-h-screen font-extralight`}
-      >
-        <CartProvider>
-          <AuthProvider>
-            <CustomizationProvider>
-              <Header />
-              <CartDrawer />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-            </CustomizationProvider>
-          </AuthProvider>
-        </CartProvider>
+    <html lang="en" className={`${inter.variable} ${gorditas.variable}`}>
+      <body>
+        <AuthProvider>
+          <CartProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

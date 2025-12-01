@@ -55,16 +55,20 @@ export default function OrdersPage() {
                 params.append('endDate', endDate.toISOString());
             }
 
-            const response = await fetch(`/api/orders/list?${params.toString()}`);
+            const response = await fetch(`/api/orders/list?${params.toString()}`, {
+                credentials: 'include'
+            });
 
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');
             }
 
-            const data = await response.json();
-            setOrders(data.orders || []);
-            if (data.pagination) {
-                setTotalPages(data.pagination.pages);
+            const result = await response.json();
+            console.log('API Response:', result); // Debug log
+
+            setOrders(result.data?.orders || []);
+            if (result.data?.pagination) {
+                setTotalPages(result.data.pagination.pages);
             } else {
                 setTotalPages(1);
             }

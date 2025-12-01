@@ -24,9 +24,7 @@ import { useAuth } from '@/context/AuthContext';
 const sidebarItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/super-admin/dashboard' },
     { icon: Package, label: 'Orders', href: '/super-admin/orders' },
-    { icon: ShieldAlert, label: 'Manage Admins', href: '/super-admin/admins' },
-    { icon: PenTool, label: 'Manage Writers', href: '/super-admin/writers' },
-    { icon: ClipboardCheck, label: 'Manage QC', href: '/super-admin/qc' },
+    { icon: Users, label: 'Users', href: '/super-admin/users' },
     { icon: BarChart3, label: 'System Analytics', href: '/super-admin/analytics' },
 ];
 
@@ -52,6 +50,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         pathname.includes('/super-admin/settings')
     );
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    if (pathname === '/super-admin/login') {
+        return <>{children}</>;
+    }
 
     return (
         <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-900">
@@ -100,8 +102,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                                 variant="ghost"
                                 onClick={() => setProductsExpanded(!productsExpanded)}
                                 className={`w-full justify-start gap-3 ${pathname.includes('/super-admin/products')
-                                        ? 'bg-zinc-800 text-white'
-                                        : 'text-zinc-400'
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'text-zinc-400'
                                     }`}
                             >
                                 <Package className="w-4 h-4" />
@@ -144,8 +146,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                                 variant="ghost"
                                 onClick={() => setSettingsExpanded(!settingsExpanded)}
                                 className={`w-full justify-start gap-3 ${pathname.includes('/super-admin/settings')
-                                        ? 'bg-zinc-800 text-white'
-                                        : 'text-zinc-400'
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'text-zinc-400'
                                     }`}
                             >
                                 <Settings className="w-4 h-4" />
@@ -229,8 +231,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                             variant="ghost"
                             onClick={() => setProductsExpanded(!productsExpanded)}
                             className={`w-full justify-start gap-3 hover:bg-zinc-800 hover:text-white ${pathname.includes('/super-admin/products')
-                                    ? 'bg-zinc-800 text-white'
-                                    : 'text-zinc-400'
+                                ? 'bg-zinc-800 text-white'
+                                : 'text-zinc-400'
                                 }`}
                         >
                             <Package className="w-4 h-4" />
@@ -269,8 +271,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                             variant="ghost"
                             onClick={() => setSettingsExpanded(!settingsExpanded)}
                             className={`w-full justify-start gap-3 hover:bg-zinc-800 hover:text-white ${pathname.includes('/super-admin/settings')
-                                    ? 'bg-zinc-800 text-white'
-                                    : 'text-zinc-400'
+                                ? 'bg-zinc-800 text-white'
+                                : 'text-zinc-400'
                                 }`}
                         >
                             <Settings className="w-4 h-4" />
@@ -315,7 +317,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-auto pt-16">
+            <main className="flex-1 overflow-auto pt-16 md:pt-0 relative z-10">
                 <div className="p-8">{children}</div>
             </main>
         </div>

@@ -15,11 +15,36 @@ export default function SuperAdminLoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+
+        try {
+            const email = (e.target as any).email.value;
+            const password = (e.target as any).password.value;
+
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Check if user is actually a super admin or admin
+                if (data.data.user.role === 'super_admin' || data.data.user.role === 'admin') {
+                    router.push('/super-admin/dashboard');
+                } else {
+                    alert('Access Denied: You do not have super admin privileges.');
+                    setLoading(false);
+                }
+            } else {
+                alert(data.message || 'Login failed');
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('An error occurred during login');
             setLoading(false);
-            router.push('/super-admin/dashboard');
-        }, 1000);
+        }
     };
 
     return (

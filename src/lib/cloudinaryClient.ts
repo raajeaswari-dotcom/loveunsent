@@ -1,7 +1,11 @@
 export const getCloudinaryUrl = (path: string) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-    if (!cloudName || !path) return path;
+    // If no Cloudinary configuration or no path, return local public path
+    if (!cloudName || !path) {
+        // Ensure path starts with / for Next.js public folder
+        return path.startsWith('/') ? path : `/${path}`;
+    }
 
     // If it's already a full URL, return it
     if (path.startsWith('http')) return path;
@@ -23,17 +27,25 @@ export const getCloudinaryUrl = (path: string) => {
     // But to be safe with 'fetch' format, we can use the full filename.
 
     // Strategy: 
-    // 1. Remove 'images/' prefix
-    // 2. Prepend 'loveunsent/'
+    // 1. Remove 'images/' prefix if present
+    // 2. Prepend 'loveunsent/' if not already present in a way that suggests it's a public ID
     // 3. Construct URL
 
     if (cleanPath.startsWith('images/')) {
         const filename = cleanPath.replace('images/', '');
-        // Remove extension for public ID if we assume standard upload, 
-        // but keeping it is often safer if we use format auto or if uploaded with extension.
-        // Let's keep extension for now as it's easier to match.
+        // Assuming the user has uploaded these to 'loveunsent' folder in Cloudinary
         return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/v1/loveunsent/${filename}`;
     }
 
-    return path;
+    // If it doesn't start with http and doesn't look like a full Cloudinary URL, 
+    // treat it as a public ID.
+    // If it doesn't have a folder prefix, we might assume it's in 'loveunsent' if that's our convention,
+    // OR we just return it as is if we assume the DB has full public IDs.
+    // For now, let's assume if it's a simple filename, it's in 'loveunsent'.
+    if (!cleanPath.includes('/')) {
+        return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/v1/loveunsent/${cleanPath}`;
+    }
+
+    // If it looks like a public ID (has slashes but no http), construct the URL
+    return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/v1/${cleanPath}`;
 };

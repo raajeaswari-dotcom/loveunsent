@@ -118,6 +118,41 @@ export default function Home() {
 function OurCollection() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      try {
+        const response = await fetch('/api/products/collection/list');
+
+        if (!response.ok) {
+          console.error('Failed to fetch collections, status:', response.status);
+          setLoading(false);
+          return;
+        }
+
+        const result = await response.json();
+        console.log('Collections API response:', result);
+
+        if (result.success && result.data) {
+          const collectionData = result.data.collections || [];
+          console.log('Setting collections:', collectionData.length, 'items');
+          setCollections(collectionData);
+        } else {
+          console.error('API returned success=false or no data:', result);
+          setCollections([]);
+        }
+      } catch (error) {
+        console.error('Error fetching collections:', error);
+        setCollections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCollections();
+  }, []);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -162,63 +197,76 @@ function OurCollection() {
       <div className="container px-4">
         <h2 className="text-4xl font-nighty text-center mb-16 text-[#511317]">Our Collection</h2>
 
-        <div
-          className="relative max-w-6xl mx-auto"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          {/* Navigation Arrows */}
-          <button
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-50 transition-all"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-50 transition-all"
-            aria-label="Next"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-
-          {/* Cards Container */}
-          <div
-            ref={scrollRef}
-            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {collections.map((collection, index) => (
-              <div
-                key={index}
-                className="min-w-[350px] bg-transparent border-2 border-gray-100 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
-              >
-                <div className="h-48 overflow-hidden relative">
-                  <img
-                    src={collection.image}
-                    alt={collection.title}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
-                </div>
-                <div className="p-6 flex flex-col flex-1">
-                  <h3 className="text-xl font-bold mb-3 text-[#511317] font-gorditas">{collection.title}</h3>
-                  <p className="text-[#511317] text-sm mb-6 flex-1 leading-relaxed">
-                    {collection.description}
-                  </p>
-                  <Link href="/customize" className="mt-auto">
-                    <Button
-                      className="w-full h-10 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight text-sm"
-                    >
-                      CUSTOMIZE
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#511317]"></div>
           </div>
-        </div>
+        ) : collections.length === 0 ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <p className="text-xl text-[#511317] mb-4">No collections available at the moment.</p>
+              <p className="text-sm text-[#511317]/70">Please check back later or contact support.</p>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="relative max-w-6xl mx-auto"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            {/* Navigation Arrows */}
+            <button
+              onClick={() => scroll("left")}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-50 transition-all"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => scroll("right")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-50 transition-all"
+              aria-label="Next"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+
+            {/* Cards Container */}
+            <div
+              ref={scrollRef}
+              className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {collections.map((collection, index) => (
+                <div
+                  key={collection._id || index}
+                  className="min-w-[350px] bg-transparent border-2 border-gray-100 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
+                >
+                  <div className="h-48 overflow-hidden relative">
+                    <img
+                      src={getCloudinaryUrl(collection.imageUrl)}
+                      alt={collection.name}
+                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <h3 className="text-xl font-bold mb-3 text-[#511317] font-gorditas uppercase">{collection.name}</h3>
+                    <p className="text-[#511317] text-sm mb-6 flex-1 leading-relaxed">
+                      {collection.description}
+                    </p>
+                    <Link href="/customize" className="mt-auto">
+                      <Button
+                        className="w-full h-10 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight text-sm"
+                      >
+                        CUSTOMIZE
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

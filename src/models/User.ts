@@ -1,63 +1,106 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import mongoose, { Schema, model, models } from "mongoose";
 
-const UserSchema = new Schema({
+const UserSchema = new Schema(
+  {
     name: {
-        type: String,
-        required: [true, 'Name is required'],
-        trim: true,
-        minlength: [2, 'Name must be at least 2 characters']
+      type: String,
+      required: false, // NOT required for OTP login
+      trim: true,
+      minlength: [2, "Name must be at least 2 characters"],
     },
-    email: {
-        type: String,
-        required: [true, 'Email is required'],
-        unique: true,
-        lowercase: true,
-        trim: true,
-        match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
-    },
-    passwordHash: {
-        type: String,
-        required: [true, 'Password hash is required']
-    },
-    role: {
-        type: String,
-        enum: {
-            values: ['super_admin', 'admin', 'writer', 'qc', 'customer'],
-            message: '{VALUE} is not a supported role'
-        },
-        default: 'customer'
-    },
-    permissions: [{
-        type: String
-    }], // Array of permission strings e.g., 'manage_users', 'approve_orders'
 
-    // Writer specific fields
-    handwritingSamples: [{
-        styleId: { type: Schema.Types.ObjectId, ref: 'Handwriting' },
-        imageUrl: String,
-        approved: { type: Boolean, default: false }
-    }],
-    languages: [{
+    email: {
+      type: String,
+      required: false, // FIXED — allow mobile-only login
+      unique: true,
+      sparse: true, // FIX — prevents duplicate null errors
+      lowercase: true,
+      trim: true,
+      // Allow empty unless actual email provided
+      validate: {
+        validator: function (v: any) {
+          if (!v) return true; // allow null/undefined
+          return /^\S+@\S+\.\S+$/.test(v);
+        },
+        message: "Please use a valid email address",
+      },
+    },
+
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    passwordHash: {
+      type: String,
+      required: false, // optional for OTP users
+    },
+
+    role: {
+      type: String,
+      enum: ["super_admin", "admin", "writer", "qc", "customer"],
+      default: "customer",
+    },
+
+    permissions: [
+      {
         type: String,
-        enum: ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Gujarati', 'Punjabi']
-    }],
+      },
+    ],
+
+    // Writer-specific
+    handwritingSamples: [
+      {
+        styleId: { type: Schema.Types.ObjectId, ref: "Handwriting" },
+        imageUrl: String,
+        approved: { type: Boolean, default: false },
+      },
+    ],
+
+    languages: [
+      {
+        type: String,
+        enum: [
+          "English",
+          "Hindi",
+          "Marathi",
+          "Tamil",
+          "Telugu",
+          "Kannada",
+          "Malayalam",
+          "Bengali",
+          "Gujarati",
+          "Punjabi",
+        ],
+      },
+    ],
 
     phone: {
-        type: String,
-        trim: true
+      type: String,
+      unique: true,
+      sparse: true, // FIX — allow multiple null values
+      trim: true,
     },
-    addresses: [{
+
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    addresses: [
+      {
         street: String,
         city: String,
         state: String,
         zip: String,
         country: String,
-        isDefault: Boolean
-    }],
+        isDefault: Boolean,
+      },
+    ],
 
-    isActive: { type: Boolean, default: true }
-}, {
-    timestamps: true
-});
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
 
-export const User = models.User || model('User', UserSchema);
+export const User = models.User || model("User", UserSchema);

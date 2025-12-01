@@ -40,7 +40,14 @@ export async function POST(req: NextRequest) {
         const token = signToken({ userId: user._id, role: user.role });
 
         const response = successResponse({ user: { id: user._id, name: user.name, email: user.email, role: user.role } }, 201);
-        response.cookies.set('token', token, { httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7 }); // 7 days
+        response.cookies.set('token', token, {
+            httpOnly: true,
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            sameSite: 'lax',
+            secure: false,
+            domain: 'localhost'
+        });
 
         return response;
     } catch (error: any) {

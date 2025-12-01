@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { Order } from '@/models/Order';
 import { User } from '@/models/User';
@@ -21,39 +21,41 @@ export async function GET(req: NextRequest) {
         // Parallelize data fetching for performance
         const [
             totalRevenueResult,
-            totalUsers,
+            totalOrders,
             activeWriters,
-            recentLogs,
-            orderStats
+            totalUsers,
+            recentLogs
         ] = await Promise.all([
             // Calculate total revenue from non-cancelled, paid orders
             Order.aggregate([
                 { $match: { workflowState: { $nin: ['pending_payment', 'cancelled'] } } },
-                { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+                { $group: { _id: null, total: { $sum: "$price" } } }
             ]),
-            // Count total users
-            User.countDocuments({}),
+            // Count total orders
+            Order.countDocuments({}),
             // Count active writers
             User.countDocuments({ role: 'writer', isActive: true }),
-            // Fetch recent admin logs
-            AdminActionLog.find().sort({ createdAt: -1 }).limit(5).populate('adminId', 'name email'),
-            // Get order status breakdown
-            Order.aggregate([
-                { $group: { _id: "$workflowState", count: { $sum: 1 } } }
-            ])
+            // Count total users
+            User.countDocuments({}),
+            // Fetch recent logs
+            AdminActionLog.find().sort({ createdAt: -1 }).limit(5).populate('adminId', 'name email')
         ]);
 
         const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
 
-        return successResponse({
+        // Return data in the structure expected by the frontend: { stats: ..., recentLogs: ... }
+        // Bypassing successResponse wrapper to match frontend code: const data = await response.json(); setStats(data.stats);
+        return NextResponse.json({
             stats: {
                 totalRevenue,
                 totalUsers,
                 activeWriters,
-                systemStatus: 'Healthy', // Placeholder for now
+                systemStatus: 'Operational'
             },
-            recentLogs,
-            orderStats
+            recentLogs: recentLogs.map(log => ({
+                ...log.toObject(),
+                adminId: log.adminId // Ensure populated field is returned
+            }))
         });
 
     } catch (error: any) {

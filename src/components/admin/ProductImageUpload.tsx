@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Upload, X, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
+import { getCloudinaryUrl } from '@/lib/cloudinaryClient';
+
 interface ProductImageUploadProps {
     value: string;
     onChange: (url: string) => void;
@@ -74,7 +76,7 @@ export function ProductImageUpload({ value, onChange, label = "Product Image" }:
             {value ? (
                 <div className="relative inline-block">
                     <Image
-                        src={value}
+                        src={getCloudinaryUrl(value)}
                         alt="Product preview"
                         width={200}
                         height={200}
