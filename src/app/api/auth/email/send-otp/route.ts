@@ -35,11 +35,16 @@ export async function POST(req: NextRequest) {
 
     const code = await createOTP(email, "email", purpose, { ipAddress, userAgent });
 
+    console.log(`📧 Email OTP created for ${email}:`, code);
+
     const sent = await emailService.sendOTP(email, code);
 
     if (!sent) {
+      console.error(`❌ Failed to send email OTP to ${email}`);
       return errorResponse("Failed to send OTP. Please try again.", 500);
     }
+
+    console.log(`✅ Email OTP sent successfully to ${email}`);
 
     return successResponse({
       message: "OTP sent successfully to your email",

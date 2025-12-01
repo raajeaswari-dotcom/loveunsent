@@ -45,11 +45,16 @@ export async function POST(req: NextRequest) {
       userAgent,
     });
 
+    console.log(`📱 Mobile OTP created for ${phone}:`, code);
+
     // Send SMS
     const sent = await smsService.sendOTP(phone, code);
     if (!sent) {
+      console.error(`❌ Failed to send mobile OTP to ${phone}`);
       return errorResponse("Failed to send OTP", 500);
     }
+
+    console.log(`✅ Mobile OTP sent successfully to ${phone}`);
 
     return successResponse({
       message: "OTP sent successfully",

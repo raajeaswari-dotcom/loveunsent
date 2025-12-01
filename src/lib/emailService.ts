@@ -43,7 +43,17 @@ class NodeMailerService implements EmailService {
         }
 
         try {
-            await this.transporter.sendMail({
+            // In dev mode, log OTP to console for easy testing
+            if (process.env.NODE_ENV !== 'production' && !process.env.SMTP_USER) {
+                console.log('═══════════════════════════════════════');
+                console.log('📧 DEV MODE - EMAIL OTP');
+                console.log(`Email: ${email}`);
+                console.log(`OTP Code: ${code}`);
+                console.log('═══════════════════════════════════════');
+                return true; // Return success in dev mode
+            }
+
+            const result = await this.transporter.sendMail({
                 from: process.env.EMAIL_FROM || 'noreply@loveunsent.com',
                 to: email,
                 subject: 'Your Love Unsent Verification Code',
@@ -61,9 +71,11 @@ class NodeMailerService implements EmailService {
                     </div>
                 `
             });
+
+            console.log('✅ Email OTP sent successfully to:', email);
             return true;
         } catch (error) {
-            console.error('Failed to send email OTP:', error);
+            console.error('❌ Failed to send email OTP:', error);
             return false;
         }
     }

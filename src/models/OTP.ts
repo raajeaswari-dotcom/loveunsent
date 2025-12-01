@@ -5,6 +5,8 @@ export interface IOTP extends Document {
   code: string;
   channel: "email" | "mobile";
   purpose: "signup" | "login" | "verification";
+  verified: boolean;
+  attempts: number;
   createdAt: Date;
   expiresAt: Date;
   metadata?: {
@@ -23,6 +25,8 @@ const OTPSchema = new Schema<IOTP>(
       enum: ["signup", "login", "verification"],
       default: "login",
     },
+    verified: { type: Boolean, default: false },
+    attempts: { type: Number, default: 0 },
     metadata: {
       ipAddress: String,
       userAgent: String,
