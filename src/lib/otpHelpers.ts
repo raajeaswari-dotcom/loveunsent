@@ -14,19 +14,36 @@ export function generateOTPCode(): string {
 }
 
 /**
+ * Helper to normalize identifiers
+ */
+function normalizeIdentifier(identifier: string, channel: "email" | "mobile"): string {
+  if (!identifier) return identifier;
+
+  if (channel === "email") {
+    return identifier.toLowerCase().trim();
+  }
+
+  if (channel === "mobile") {
+    // Remove all non-digit characters except +
+    // This ensures +91 98765 43210 becomes +919876543210
+    return identifier.replace(/[^\d+]/g, '').trim();
+  }
+
+  return identifier.trim();
+}
+
+/**
  * Create and save an OTP
  */
 export async function createOTP(
   identifier: string,
-  channel: "email" | "mobile",   // 👈 rename so you never mix them
+  channel: "email" | "mobile",
   purpose: "signup" | "login" | "verification" | "password_reset",
   metadata?: { ipAddress?: string; userAgent?: string }
 ): Promise<string> {
 
-  // Normalize email
-  if (channel === "email" && identifier) {
-    identifier = identifier.toLowerCase().trim();
-  }
+  // Normalize identifier
+  const cleanIdentifier = normalizeIdentifier(identifier, channel);
 
   await connectDB();
 
@@ -35,14 +52,14 @@ export async function createOTP(
 
   // Invalidate old OTPs
   await OTP.updateMany(
-    { identifier, channel, verified: false },
+    { identifier: cleanIdentifier, channel, verified: false },
     { $set: { verified: true } }
   );
 
-  // CREATE NEW OTP (must use channel, NOT type)
+  // CREATE NEW OTP
   await OTP.create({
-    identifier,
-    channel,       // ✅ REQUIRED FIELD
+    identifier: cleanIdentifier,
+    channel,
     code,
     expiresAt,
     purpose,
@@ -62,16 +79,14 @@ export async function verifyOTP(
   channel: "email" | "mobile",
   code: string | number
 ) {
-  // Normalize email
-  if (channel === "email" && identifier) {
-    identifier = identifier.toLowerCase().trim();
-  }
+  // Normalize identifier
+  const cleanIdentifier = normalizeIdentifier(identifier, channel);
 
   await connectDB();
 
-  const codeStr = String(code);
+  const codeStr = String(code).trim();
 
-  console.log(`[VerifyOTP] Verifying for: ${identifier}, Channel: ${channel}, Input: ${codeStr}`);
+  console.log(`[VerifyOTP] Verifying for: ${cleanIdentifier} (orig: ${identifier}), Channel: ${channel}, Input: ${codeStr}`);
   console.log(`[VerifyOTP] MASTER_OTP env var: ${process.env.MASTER_OTP ? 'SET' : 'NOT SET'}`);
 
   // Master OTP bypass (works in any environment if env var is set)
@@ -85,35 +100,48 @@ export async function verifyOTP(
     return { success: true, message: "OTP verified successfully (dev master)" };
   }
 
+  // Find the OTP
   const otp = await OTP.findOne({
-    identifier,
-    channel,         // ✅ FIXED
+    identifier: cleanIdentifier,
+    channel,
     code: codeStr,
     verified: false,
     expiresAt: { $gt: new Date() },
   }).sort({ createdAt: -1 });
 
-  console.log(`[VerifyOTP] DB Lookup Result: ${otp ? 'FOUND' : 'NOT FOUND'}`);
-
   if (!otp) {
+    console.log(`[VerifyOTP] ❌ No matching active OTP found for ${cleanIdentifier} with code ${codeStr}`);
+
     // Debugging: Check if an OTP exists for this user but with a different code
     const existingOtp = await OTP.findOne({
-      identifier,
+      identifier: cleanIdentifier,
       channel,
       verified: false,
       expiresAt: { $gt: new Date() },
     }).sort({ createdAt: -1 });
 
     if (existingOtp) {
-      console.log(`[VerifyOTP] Mismatch! Found OTP: ${existingOtp.code} for ${identifier}, but received: ${codeStr}`);
+      console.log(`[VerifyOTP] ⚠️ Mismatch! Found active OTP: ${existingOtp.code} for ${cleanIdentifier}, but received: ${codeStr}`);
     } else {
-      console.log(`[VerifyOTP] No active OTP found for ${identifier}`);
+      console.log(`[VerifyOTP] ⚠️ No active OTP found at all for ${cleanIdentifier}`);
+
+      // Check for expired OTPs
+      const expiredOtp = await OTP.findOne({
+        identifier: cleanIdentifier,
+        channel,
+        code: codeStr,
+      }).sort({ createdAt: -1 });
+
+      if (expiredOtp) {
+        console.log(`[VerifyOTP] ⚠️ Found EXPIRED OTP for ${cleanIdentifier}. Expired at: ${expiredOtp.expiresAt}`);
+      }
     }
 
     return { success: false, message: "Invalid or expired OTP" };
   }
 
   if (otp.attempts >= 5) {
+    console.log(`[VerifyOTP] ❌ Too many attempts for ${cleanIdentifier}`);
     return {
       success: false,
       message: "Too many attempts. Request a new OTP.",
@@ -124,6 +152,7 @@ export async function verifyOTP(
   otp.verified = true;
   await otp.save();
 
+  console.log(`[VerifyOTP] ✅ OTP verified successfully for ${cleanIdentifier}`);
   return { success: true, message: "OTP verified successfully" };
 }
 
@@ -134,17 +163,18 @@ export async function checkOTPRateLimit(
   identifier: string,
   channel: "email" | "mobile"
 ) {
+  const cleanIdentifier = normalizeIdentifier(identifier, channel);
   await connectDB();
 
   const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
   const count = await OTP.countDocuments({
-    identifier,
-    channel,        // ✅ FIXED
+    identifier: cleanIdentifier,
+    channel,
     createdAt: { $gte: fifteenMinutesAgo },
   });
 
-  if (count >= 3) {
+  if (count >= 5) { // Increased to 5 for better UX
     return {
       allowed: false,
       message: "Too many OTP requests. Try again later.",
@@ -162,13 +192,10 @@ export async function checkVerifiedOTP(
   channel: "email" | "mobile",
   code: string | number
 ) {
-  // Normalize email
-  if (channel === "email" && identifier) {
-    identifier = identifier.toLowerCase().trim();
-  }
+  const cleanIdentifier = normalizeIdentifier(identifier, channel);
 
   await connectDB();
-  const codeStr = String(code);
+  const codeStr = String(code).trim();
 
   // Master OTP bypass
   if (process.env.MASTER_OTP && codeStr === process.env.MASTER_OTP) {
@@ -181,7 +208,7 @@ export async function checkVerifiedOTP(
   }
 
   const otp = await OTP.findOne({
-    identifier,
+    identifier: cleanIdentifier,
     channel,
     code: codeStr,
     verified: true, // Look for ALREADY verified
