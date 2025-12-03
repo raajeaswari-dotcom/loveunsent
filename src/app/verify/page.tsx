@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Smartphone, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export default function VerifyPage() {
+function VerifyContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user, refreshUser, loading: authLoading } = useAuth();
@@ -288,5 +288,13 @@ export default function VerifyPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function VerifyPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+            <VerifyContent />
+        </Suspense>
     );
 }
