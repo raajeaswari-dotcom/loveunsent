@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IOTP extends Document {
   identifier: string;
   code: string;
-  channel: "email" | "mobile";
+  type: "email" | "mobile";
   purpose: "signup" | "login" | "verification";
   verified: boolean;
   attempts: number;
@@ -19,7 +19,8 @@ const OTPSchema = new Schema<IOTP>(
   {
     identifier: { type: String, required: true },
     code: { type: String, required: true },
-    channel: { type: String, enum: ["email", "mobile"], required: true },
+    // changed from `channel` -> `type` to match DB documents
+    type: { type: String, enum: ["email", "mobile"], required: true },
     purpose: {
       type: String,
       enum: ["signup", "login", "verification"],
@@ -36,6 +37,6 @@ const OTPSchema = new Schema<IOTP>(
   { timestamps: true }
 );
 
-// 👇 THIS IS THE KEY FIX — NAMED EXPORT
+// Export model (keeps existing collection name)
 export const OTP =
   mongoose.models.OTP || mongoose.model<IOTP>("OTP", OTPSchema);
