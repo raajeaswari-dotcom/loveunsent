@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
                 });
 
                 // Keep the same token (same user)
-                response.cookies.set("token", token, {
+                response.cookies.set("token", token as string, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
                     sameSite: "lax",
