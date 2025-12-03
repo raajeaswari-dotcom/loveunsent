@@ -29,6 +29,8 @@ export const AuthProvider = ({ children }: any) => {
 
   const login = (userData: any) => {
     setUser(userData);
+    // Fetch fresh user data from server to ensure we have all fields
+    setTimeout(() => refreshUser(), 100);
   };
 
   const logout = () => {

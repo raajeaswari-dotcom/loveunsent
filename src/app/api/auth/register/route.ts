@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
             return errorResponse('Validation Error', 400, result.error.format());
         }
 
-        const { name, email, password, role } = result.data;
+        const { name, email: rawEmail, password, role } = result.data;
+        const email = rawEmail.toLowerCase().trim();
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {

@@ -38,9 +38,10 @@ export default function ProfileForm() {
         try {
             const response = await fetch('/api/user/profile');
             if (response.ok) {
-                const data = await response.json();
-                setName(data.user.name || '');
-                setAddresses(data.user.addresses || []);
+                const result = await response.json();
+                const data = result.data || result;
+                setName(data.user?.name || '');
+                setAddresses(data.user?.addresses || []);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -113,13 +114,14 @@ export default function ProfileForm() {
                 body: JSON.stringify({ name }),
             });
 
-            const data = await response.json();
+            const result = await response.json();
+            const data = result.data || result;
 
             if (response.ok) {
                 setMessage({ type: 'success', text: 'Profile updated successfully' });
                 refreshUser();
             } else {
-                setMessage({ type: 'error', text: data.message || 'Failed to update profile' });
+                setMessage({ type: 'error', text: data.message || result.message || 'Failed to update profile' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -141,10 +143,11 @@ export default function ProfileForm() {
                 body: JSON.stringify({ addresses: updatedAddresses }),
             });
 
-            const data = await response.json();
+            const result = await response.json();
+            const data = result.data || result;
 
             if (response.ok) {
-                setAddresses(data.user.addresses);
+                setAddresses(data.user?.addresses || updatedAddresses);
                 setIsAddingAddress(false);
                 setNewAddress({
                     street: '',
@@ -157,8 +160,9 @@ export default function ProfileForm() {
                 setPinCodeStatus('idle');
                 setPinCodeMessage('');
                 setMessage({ type: 'success', text: 'Address added successfully' });
+                setTimeout(() => fetchProfile(), 500);
             } else {
-                setMessage({ type: 'error', text: data.message || 'Failed to add address' });
+                setMessage({ type: 'error', text: data.message || result.message || 'Failed to add address' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -179,12 +183,15 @@ export default function ProfileForm() {
                 body: JSON.stringify({ addresses: updatedAddresses }),
             });
 
+            const result = await response.json();
+            const data = result.data || result;
+
             if (response.ok) {
-                const data = await response.json();
-                setAddresses(data.user.addresses);
+                setAddresses(data.user?.addresses || updatedAddresses);
                 setMessage({ type: 'success', text: 'Address deleted successfully' });
+                setTimeout(() => fetchProfile(), 500);
             } else {
-                setMessage({ type: 'error', text: 'Failed to delete address' });
+                setMessage({ type: 'error', text: data.message || result.message || 'Failed to delete address' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -212,15 +219,73 @@ export default function ProfileForm() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input value={user?.email || ''} disabled className="bg-muted" />
-                        </div>
-                        {user?.role === 'customer' && (
-                            <div className="space-y-2">
-                                <Label>Phone</Label>
-                                <Input value={(user as any)?.phone || ''} disabled className="bg-muted" />
+                            <Label>Email Address</Label>
+                            <div className="flex gap-2 items-center">
+                                <Input value={user?.email || 'Not added'} disabled className="bg-muted flex-1" />
+                                {user?.email ? (
+                                    user.emailVerified ? (
+                                        <div className="flex items-center gap-1 text-green-600 text-sm whitespace-nowrap">
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            Verified
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.location.href = '/verify?type=email'}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Verify Email
+                                        </Button>
+                                    )
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.location.href = '/verify?type=email&action=add'}
+                                        className="whitespace-nowrap"
+                                    >
+                                        + Add Email
+                                    </Button>
+                                )}
                             </div>
-                        )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Mobile Number</Label>
+                            <div className="flex gap-2 items-center">
+                                <Input value={user?.phone || 'Not added'} disabled className="bg-muted flex-1" />
+                                {user?.phone ? (
+                                    user.phoneVerified ? (
+                                        <div className="flex items-center gap-1 text-green-600 text-sm whitespace-nowrap">
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            Verified
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.location.href = '/verify?type=mobile'}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Verify Mobile
+                                        </Button>
+                                    )
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.location.href = '/verify?type=mobile&action=add'}
+                                        className="whitespace-nowrap"
+                                    >
+                                        + Add Mobile
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
 
                         <Button type="submit" disabled={loading}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -256,7 +321,7 @@ export default function ProfileForm() {
                                             maxLength={6}
                                             required
                                             className={`pr-10 ${pinCodeStatus === 'valid' ? 'border-green-500' :
-                                                    pinCodeStatus === 'invalid' ? 'border-red-500' : ''
+                                                pinCodeStatus === 'invalid' ? 'border-red-500' : ''
                                                 }`}
                                         />
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -273,8 +338,8 @@ export default function ProfileForm() {
                                     </div>
                                     {pinCodeMessage && (
                                         <p className={`text-xs flex items-center gap-1 ${pinCodeStatus === 'valid' ? 'text-green-600' :
-                                                pinCodeStatus === 'invalid' ? 'text-red-600' :
-                                                    'text-blue-600'
+                                            pinCodeStatus === 'invalid' ? 'text-red-600' :
+                                                'text-blue-600'
                                             }`}>
                                             {pinCodeMessage}
                                         </p>

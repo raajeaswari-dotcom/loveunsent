@@ -79,9 +79,13 @@ export async function PUT(req: NextRequest) {
         const body = await req.json();
         const { name, addresses } = body;
 
+        console.log('Profile PUT - Update data:', { name, addressCount: addresses?.length });
+
         const updateData: any = {};
         if (name) updateData.name = name;
         if (addresses) updateData.addresses = addresses;
+
+        console.log('Profile PUT - Updating user with:', updateData);
 
         const user = await User.findByIdAndUpdate(
             userId,
@@ -93,6 +97,12 @@ export async function PUT(req: NextRequest) {
             console.error('Profile PUT - User not found:', userId);
             return errorResponse('User not found', 404);
         }
+
+        console.log('Profile PUT - User updated successfully:', {
+            userId: user._id,
+            name: user.name,
+            addressCount: user.addresses?.length
+        });
 
         return successResponse({
             message: 'Profile updated successfully',

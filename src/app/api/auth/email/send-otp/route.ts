@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
       return errorResponse("Validation Error", 400, result.error.format());
     }
 
-    const { email, purpose } = result.data;
+    const { email: rawEmail, purpose } = result.data;
+    const email = rawEmail.toLowerCase().trim();
 
     const rateLimit = await checkOTPRateLimit(email, "email");
     if (!rateLimit.allowed) {

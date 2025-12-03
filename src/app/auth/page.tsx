@@ -55,12 +55,8 @@ export default function AuthPage() {
         }
     }, [resendTimer]);
 
-    // Redirect if logged in
-    useEffect(() => {
-        if (user && !authLoading) {
-            router.push("/");
-        }
-    }, [user, authLoading, router]);
+    // Don't auto-redirect logged-in users - let the manual redirect after login handle it
+    // This prevents conflicts with the redirect to /dashboard after successful login
 
     // Format phone number
     const formatPhoneNumber = (value: string) => {
@@ -98,7 +94,7 @@ export default function AuthPage() {
 
         const body =
             method === "email"
-                ? { email, purpose: "login" }
+                ? { email: email.toLowerCase().trim(), purpose: "login" }
                 : { phone, purpose: "login" };
 
         try {
@@ -143,7 +139,7 @@ export default function AuthPage() {
 
         const body =
             method === "email"
-                ? { email, code: otpCode, name: isNewUser ? name : undefined }
+                ? { email: email.toLowerCase().trim(), code: otpCode, name: isNewUser ? name : undefined }
                 : { phone, code: otpCode, name: isNewUser ? name : undefined };
 
         try {
@@ -172,7 +168,7 @@ export default function AuthPage() {
                 // Success - login user
                 login(data.user);
                 setSuccess("Login successful!");
-                setTimeout(() => router.push("/"), 500);
+                setTimeout(() => router.push("/dashboard"), 500);
             }
         } catch (err) {
             setError("Network error. Please try again.");

@@ -27,7 +27,17 @@ class ResendService implements EmailService {
     }
 
     async sendOTP(email: string, code: string): Promise<boolean> {
-        // Dev mode: log to console if Resend not configured
+        // 1. Master OTP Bypass: If MASTER_OTP is set, skip sending and return success
+        if (process.env.MASTER_OTP) {
+            console.log('═══════════════════════════════════════');
+            console.log('📧 MASTER OTP ACTIVE - Skipping Email Send');
+            console.log(`Email: ${email}`);
+            console.log(`OTP Code: ${code}`);
+            console.log('═══════════════════════════════════════');
+            return true;
+        }
+
+        // 2. Dev mode fallback: log to console if Resend not configured
         if (!this.resend) {
             if (process.env.NODE_ENV !== 'production') {
                 console.log('═══════════════════════════════════════');

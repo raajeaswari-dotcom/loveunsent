@@ -9,3 +9,7 @@ export function GET() {
   });
   return res;
 }
+
+export function POST() {
+  return GET();
+}

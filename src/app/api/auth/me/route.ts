@@ -4,14 +4,13 @@ import { verifyToken } from "../../../../lib/auth";
 import { User } from "../../../../models/User";
 import connectDB from "../../../../lib/db";
 
+import { cookies } from "next/headers";
+
 export async function GET(req: Request) {
   await connectDB();
 
-  const cookieHeader = req.headers.get("cookie");
-  const token = cookieHeader
-    ?.split("; ")
-    .find((row) => row.startsWith("token="))
-    ?.split("=")[1];
+  const cookieStore = cookies();
+  const token = cookieStore.get("token")?.value;
 
   if (!token) {
     return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
@@ -32,6 +31,8 @@ export async function GET(req: Request) {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
       },
     });
   } catch (err) {

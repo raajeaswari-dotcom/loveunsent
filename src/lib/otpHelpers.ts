@@ -23,6 +23,11 @@ export async function createOTP(
   metadata?: { ipAddress?: string; userAgent?: string }
 ): Promise<string> {
 
+  // Normalize email
+  if (channel === "email" && identifier) {
+    identifier = identifier.toLowerCase().trim();
+  }
+
   await connectDB();
 
   const code = generateOTPCode();
@@ -57,6 +62,11 @@ export async function verifyOTP(
   channel: "email" | "mobile",
   code: string | number
 ) {
+  // Normalize email
+  if (channel === "email" && identifier) {
+    identifier = identifier.toLowerCase().trim();
+  }
+
   await connectDB();
 
   const codeStr = String(code);
@@ -70,8 +80,8 @@ export async function verifyOTP(
     return { success: true, message: "OTP verified successfully (master)" };
   }
 
-  // Dev bypass
-  if (process.env.NODE_ENV !== "production" && codeStr === "123456") {
+  // Dev bypass - Allow 123456 AND 12345
+  if (process.env.NODE_ENV !== "production" && (codeStr === "123456" || codeStr === "12345")) {
     return { success: true, message: "OTP verified successfully (dev master)" };
   }
 
@@ -86,6 +96,20 @@ export async function verifyOTP(
   console.log(`[VerifyOTP] DB Lookup Result: ${otp ? 'FOUND' : 'NOT FOUND'}`);
 
   if (!otp) {
+    // Debugging: Check if an OTP exists for this user but with a different code
+    const existingOtp = await OTP.findOne({
+      identifier,
+      channel,
+      verified: false,
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
+
+    if (existingOtp) {
+      console.log(`[VerifyOTP] Mismatch! Found OTP: ${existingOtp.code} for ${identifier}, but received: ${codeStr}`);
+    } else {
+      console.log(`[VerifyOTP] No active OTP found for ${identifier}`);
+    }
+
     return { success: false, message: "Invalid or expired OTP" };
   }
 
@@ -128,4 +152,41 @@ export async function checkOTPRateLimit(
   }
 
   return { allowed: true, message: "OK" };
+}
+
+/**
+ * Check if an OTP was already verified (for multi-step signup)
+ */
+export async function checkVerifiedOTP(
+  identifier: string,
+  channel: "email" | "mobile",
+  code: string | number
+) {
+  // Normalize email
+  if (channel === "email" && identifier) {
+    identifier = identifier.toLowerCase().trim();
+  }
+
+  await connectDB();
+  const codeStr = String(code);
+
+  // Master OTP bypass
+  if (process.env.MASTER_OTP && codeStr === process.env.MASTER_OTP) {
+    return true;
+  }
+
+  // Dev bypass
+  if (process.env.NODE_ENV !== "production" && (codeStr === "123456" || codeStr === "12345")) {
+    return true;
+  }
+
+  const otp = await OTP.findOne({
+    identifier,
+    channel,
+    code: codeStr,
+    verified: true, // Look for ALREADY verified
+    expiresAt: { $gt: new Date() },
+  });
+
+  return !!otp;
 }
