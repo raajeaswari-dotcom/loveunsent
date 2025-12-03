@@ -4,7 +4,7 @@ import { User } from "@/models/User";
 import connectDB from "./db";
 
 /* ---------------------------------------------------------
-   🔹 Generate 6-digit OTP
+   🔹 Generate 6-digit OTP (supports master OTP)
 --------------------------------------------------------- */
 export function generateOTPCode(): string {
   if (process.env.MASTER_OTP) {
@@ -14,23 +14,23 @@ export function generateOTPCode(): string {
 }
 
 /* ---------------------------------------------------------
-   🔹 SEND + SAVE OTP
-   (You already have this working — unchanged)
+   🔹 Create + Save new OTP
 --------------------------------------------------------- */
 export async function createOTP(identifier: string, channel: string, purpose: string) {
   await connectDB();
 
   const cleanIdentifier = identifier.trim().toLowerCase();
+
   const code = generateOTPCode();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-  // invalidate old OTPs
+  // Invalidate previous OTPs
   await OTP.updateMany(
     { identifier: cleanIdentifier, channel, verified: false },
     { $set: { verified: true } }
   );
 
-  // create new otp
+  // Create new OTP
   const otp = await OTP.create({
     identifier: cleanIdentifier,
     channel,
@@ -44,8 +44,7 @@ export async function createOTP(identifier: string, channel: string, purpose: st
 }
 
 /* ---------------------------------------------------------
-   🔹 VERIFY OTP (MAIN FUNCTION)
-   (THIS IS WHAT FIXES YOUR ISSUE)
+   🔹 Verify OTP (MAIN FUNCTION) — FIXED COMPLETELY
 --------------------------------------------------------- */
 export async function verifyOTP(identifier: string, channel: string, code: string) {
   await connectDB();
@@ -53,11 +52,12 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
   const cleanIdentifier = identifier.trim().toLowerCase();
   const incoming = String(code).trim();
 
-  // MASTER OTP support
+  // MASTER OTP
   if (process.env.MASTER_OTP && incoming === process.env.MASTER_OTP) {
     return { success: true, message: "Master OTP accepted" };
   }
 
+  // Find latest unverified OTP
   const otpRecord = await OTP.findOne({
     identifier: cleanIdentifier,
     channel,
@@ -68,18 +68,18 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
     return { success: false, message: "Invalid or expired OTP" };
   }
 
-  // FIX: compare against "code"
+  // Compare with correct field: "code"
   const stored = String(otpRecord.code).trim();
   if (incoming !== stored) {
     return { success: false, message: "Invalid OTP" };
   }
 
-  // expiry
+  // Expiry check
   if (Date.now() > new Date(otpRecord.expiresAt).getTime()) {
     return { success: false, message: "Expired OTP" };
   }
 
-  // mark as verified
+  // Mark as verified
   otpRecord.verified = true;
   await otpRecord.save();
 
@@ -87,7 +87,7 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
 }
 
 /* ---------------------------------------------------------
-   🔹 CHECK ALREADY VERIFIED OTP
+   🔹 Check if OTP was already verified (for resubmits)
 --------------------------------------------------------- */
 export async function checkVerifiedOTP(identifier: string, channel: string, code: string) {
   await connectDB();
@@ -107,22 +107,36 @@ export async function checkVerifiedOTP(identifier: string, channel: string, code
 }
 
 /* ---------------------------------------------------------
-   🔹 GET VERIFICATION STATUS (optional)
+   🔹 Rate Limit — Allow MAX 5 OTPs per hour per identifier
+--------------------------------------------------------- */
+export async function checkOTPRateLimit(identifier: string, channel: string) {
+  await connectDB();
+
+  const cleanIdentifier = identifier.trim().toLowerCase();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const count = await OTP.countDocuments({
+    identifier: cleanIdentifier,
+    channel,
+    createdAt: { $gte: oneHourAgo },
+  });
+
+  return count < 5; // allow up to 5 OTP sends
+}
+
+/* ---------------------------------------------------------
+   🔹 OPTIONAL: Get verification status
 --------------------------------------------------------- */
 export async function getVerificationStatus(identifier: string) {
   await connectDB();
 
-  try {
-    const user = await User.findOne({ identifier });
-    if (!user) return null;
+  const user = await User.findOne({ identifier });
+  if (!user) return null;
 
-    return {
-      emailVerified: user.emailVerified || false,
-      phoneVerified: user.phoneVerified || false,
-      hasEmail: !!user.email,
-      hasPhone: !!user.phone,
-    };
-  } catch (err) {
-    return null;
-  }
+  return {
+    emailVerified: user.emailVerified || false,
+    phoneVerified: user.phoneVerified || false,
+    hasEmail: !!user.email,
+    hasPhone: !!user.phone,
+  };
 }
