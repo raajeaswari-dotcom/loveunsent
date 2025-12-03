@@ -371,7 +371,7 @@ export default function AuthPage() {
                                 {otp.map((d, i) => (
                                     <Input
                                         key={i}
-                                        ref={(el) => (otpRefs.current[i] = el)}
+                                        ref={(el) => { otpRefs.current[i] = el; }}
                                         maxLength={1}
                                         inputMode="numeric"
                                         value={d}
