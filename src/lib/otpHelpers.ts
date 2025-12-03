@@ -121,7 +121,17 @@ export async function checkOTPRateLimit(identifier: string, channel: string) {
     createdAt: { $gte: oneHourAgo },
   });
 
-  return count < 5; // allow up to 5 OTP sends
+  if (count >= 5) {
+    return {
+      allowed: false,
+      message: "Too many OTP requests. Please try again later.",
+    };
+  }
+
+  return {
+    allowed: true,
+    message: "OK",
+  };
 }
 
 /* ---------------------------------------------------------
