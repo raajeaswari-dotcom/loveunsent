@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
 
     // --- EXTRA DEBUG: fetch latest OTP doc for this identifier and print summary ---
     try {
-      const latest = await OTP.findOne({ identifier: email }).sort({ createdAt: -1 }).lean();
+      // cast to any for safe logging (lean() can confuse TS)
+      const latest: any = await OTP.findOne({ identifier: email }).sort({ createdAt: -1 }).lean();
       if (latest) {
         console.log("🔍 [VerifyOTP] Latest OTP doc for identifier:", {
           id: latest._id?.toString?.() || latest._id,
@@ -54,7 +55,6 @@ export async function POST(req: NextRequest) {
       if (isAlreadyVerified) {
         verify = { success: true, message: "OTP already verified" };
       } else {
-        // Return original error but also log it
         console.log("🔍 [VerifyOTP] Final result: invalid OTP");
         return NextResponse.json({ message: verify.message }, { status: 400 });
       }
