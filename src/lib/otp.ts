@@ -7,50 +7,44 @@ export async function validateOtpAndGetUser(identifier: string, otp: string) {
 
   const incomingOtp = String(otp).trim();
 
-  // 1. Find latest unverified OTP for this identifier
+  // NORMALIZE IDENTIFIER EXACTLY LIKE otpHelpers.ts
+  const cleanIdentifier = identifier.trim().toLowerCase();
+
+  // FIND LATEST OTP (MUST MATCH CHANNEL + VERIFIED:false)
   const otpEntry = await OTP.findOne({
-    identifier,
-    verified: false
+    identifier: cleanIdentifier,
+    verified: false,            // MUST MATCH
+    channel: "email"            // IMPORTANT (you are using email OTP)
   }).sort({ createdAt: -1 });
 
   if (!otpEntry) return null;
 
-  const storedOtp = String(otpEntry.code).trim(); // FIXED FIELD NAME
+  // MATCH OTP
+  const storedOtp = String(otpEntry.code).trim();
+  if (incomingOtp !== storedOtp) return null;
 
-  // 2. Compare OTP
-  if (incomingOtp !== storedOtp) {
-    console.log("OTP mismatch", { incomingOtp, storedOtp });
-    return null;
-  }
-
-  // 3. Check expiry
+  // CHECK EXPIRY
   const now = Date.now();
-  const expiresAt = new Date(otpEntry.expiresAt).getTime();
-
-  if (now > expiresAt) {
-    console.log("OTP expired");
-    await OTP.updateMany({ identifier }, { $set: { verified: true } });
+  const exp = new Date(otpEntry.expiresAt).getTime();
+  if (now > exp) {
+    await OTP.updateMany({ identifier: cleanIdentifier }, { $set: { verified: true } });
     return null;
   }
 
-  // 4. Find or create user
-  let user = await User.findOne({ identifier });
-
+  // USER FETCH / CREATE
+  let user = await User.findOne({ identifier: cleanIdentifier });
   if (!user) {
     user = await User.create({
-      identifier,
-      email: identifier.includes("@") ? identifier : undefined,
-      phone: identifier.startsWith("+") ? identifier : undefined,
+      identifier: cleanIdentifier,
+      email: cleanIdentifier.includes("@") ? cleanIdentifier : undefined,
+      phone: cleanIdentifier.startsWith("+") ? cleanIdentifier : undefined,
       role: "customer",
     });
   }
 
-  // 5. Mark OTP as used
+  // MARK OTP USED
   otpEntry.verified = true;
   await otpEntry.save();
-
-  // Cleanup other OTPs
-  await OTP.updateMany({ identifier }, { $set: { verified: true } });
 
   return user;
 }
