@@ -134,6 +134,12 @@ export async function verifyOTP(
 
       if (expiredOtp) {
         console.log(`[VerifyOTP] ⚠️ Found EXPIRED OTP for ${cleanIdentifier}. Expired at: ${expiredOtp.expiresAt}`);
+        return { success: false, message: "OTP has expired. Please request a new one." };
+      }
+
+      // Specific hint for developers/testers in production
+      if (process.env.NODE_ENV === "production" && (codeStr === "123456" || codeStr === "12345")) {
+        return { success: false, message: "Test OTPs are disabled in production. Set MASTER_OTP env var to enable." };
       }
     }
 
