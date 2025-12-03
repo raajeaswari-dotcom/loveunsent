@@ -88,6 +88,7 @@ function VerifyContent() {
                 setStep('otp');
                 setResendTimer(60);
             } else {
+                console.error("Send OTP Error:", data.message);
                 setError(data.message || 'Failed to send OTP');
             }
         } catch (err) {
@@ -125,6 +126,7 @@ function VerifyContent() {
                 refreshUser();
                 setTimeout(() => router.push('/dashboard'), 2000);
             } else {
+                console.error("Verify OTP Error:", data.message);
                 setError(data.message || 'Invalid OTP');
                 setOtp(['', '', '', '', '', '']);
             }

@@ -60,11 +60,20 @@ export default function AuthPage() {
 
     // Format phone number
     const formatPhoneNumber = (value: string) => {
+        // If user starts typing with +, let them type (international)
+        if (value.startsWith("+")) {
+            return value;
+        }
+        // Otherwise, if they type digits, assume India (+91) if not present
         const cleaned = value.replace(/\D/g, "");
-        if (!cleaned.startsWith("91") && cleaned.length > 0) {
+        if (cleaned.length > 0) {
+            // If they typed 91 at start, assume it's the code
+            if (cleaned.startsWith("91") && cleaned.length > 2) {
+                return "+" + cleaned;
+            }
             return "+91" + cleaned;
         }
-        return cleaned.startsWith("91") ? "+" + cleaned : value;
+        return value;
     };
 
     // Validate email
@@ -107,6 +116,7 @@ export default function AuthPage() {
             const data = await res.json();
 
             if (!res.ok) {
+                console.error("Send OTP Error:", data.message);
                 setError(data.message || "Failed to send OTP");
             } else {
                 setSuccess(`OTP sent to your ${method}`);
@@ -160,6 +170,7 @@ export default function AuthPage() {
             }
 
             if (!res.ok) {
+                console.error("Verify OTP Error:", data.message);
                 setError(data.message || "Invalid OTP");
                 // Clear OTP on error
                 setOtp(["", "", "", "", "", ""]);
