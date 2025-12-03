@@ -4,7 +4,7 @@ import { User } from "@/models/User";
 import connectDB from "./db";
 
 /* ---------------------------------------------------------
-   🔹 Generate 6-digit OTP (supports master OTP)
+   🔹 Generate 6-digit OTP (supports Master OTP)
 --------------------------------------------------------- */
 export function generateOTPCode(): string {
   if (process.env.MASTER_OTP) {
@@ -14,23 +14,29 @@ export function generateOTPCode(): string {
 }
 
 /* ---------------------------------------------------------
-   🔹 Create + Save new OTP
+   🔹 Create + Save OTP (supports metadata)
+   📌 Required because your send-otp routes call:
+   createOTP(email, "email", purpose, { ipAddress, userAgent })
 --------------------------------------------------------- */
-export async function createOTP(identifier: string, channel: string, purpose: string) {
+export async function createOTP(
+  identifier: string,
+  channel: string,
+  purpose: string,
+  meta?: { ipAddress?: string; userAgent?: string }
+) {
   await connectDB();
 
   const cleanIdentifier = identifier.trim().toLowerCase();
-
   const code = generateOTPCode();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP 5 minutes
 
-  // Invalidate previous OTPs
+  // Invalidate older OTPs
   await OTP.updateMany(
     { identifier: cleanIdentifier, channel, verified: false },
     { $set: { verified: true } }
   );
 
-  // Create new OTP
+  // Create new OTP entry
   const otp = await OTP.create({
     identifier: cleanIdentifier,
     channel,
@@ -38,13 +44,15 @@ export async function createOTP(identifier: string, channel: string, purpose: st
     expiresAt,
     purpose,
     verified: false,
+    ipAddress: meta?.ipAddress || null,
+    userAgent: meta?.userAgent || null,
   });
 
   return otp.code;
 }
 
 /* ---------------------------------------------------------
-   🔹 Verify OTP (MAIN FUNCTION) — FIXED COMPLETELY
+   🔹 Verify OTP (MAIN FIX)
 --------------------------------------------------------- */
 export async function verifyOTP(identifier: string, channel: string, code: string) {
   await connectDB();
@@ -52,12 +60,12 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
   const cleanIdentifier = identifier.trim().toLowerCase();
   const incoming = String(code).trim();
 
-  // MASTER OTP
+  // 👉 MASTER OTP support
   if (process.env.MASTER_OTP && incoming === process.env.MASTER_OTP) {
     return { success: true, message: "Master OTP accepted" };
   }
 
-  // Find latest unverified OTP
+  // Get latest unverified OTP
   const otpRecord = await OTP.findOne({
     identifier: cleanIdentifier,
     channel,
@@ -68,18 +76,18 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
     return { success: false, message: "Invalid or expired OTP" };
   }
 
-  // Compare with correct field: "code"
+  // Compare OTP using correct field: code
   const stored = String(otpRecord.code).trim();
   if (incoming !== stored) {
     return { success: false, message: "Invalid OTP" };
   }
 
-  // Expiry check
+  // Check expiry
   if (Date.now() > new Date(otpRecord.expiresAt).getTime()) {
     return { success: false, message: "Expired OTP" };
   }
 
-  // Mark as verified
+  // Mark OTP as verified
   otpRecord.verified = true;
   await otpRecord.save();
 
@@ -87,7 +95,7 @@ export async function verifyOTP(identifier: string, channel: string, code: strin
 }
 
 /* ---------------------------------------------------------
-   🔹 Check if OTP was already verified (for resubmits)
+   🔹 Check if OTP was already verified (retry handling)
 --------------------------------------------------------- */
 export async function checkVerifiedOTP(identifier: string, channel: string, code: string) {
   await connectDB();
@@ -107,7 +115,10 @@ export async function checkVerifiedOTP(identifier: string, channel: string, code
 }
 
 /* ---------------------------------------------------------
-   🔹 Rate Limit — Allow MAX 5 OTPs per hour per identifier
+   🔹 Rate Limit — allow 5 OTPs per hour
+   📌 Your routes expect:
+     rateLimit.allowed
+     rateLimit.message
 --------------------------------------------------------- */
 export async function checkOTPRateLimit(identifier: string, channel: string) {
   await connectDB();
@@ -135,7 +146,7 @@ export async function checkOTPRateLimit(identifier: string, channel: string) {
 }
 
 /* ---------------------------------------------------------
-   🔹 OPTIONAL: Get verification status
+   🔹 Get User's verification status (Optional)
 --------------------------------------------------------- */
 export async function getVerificationStatus(identifier: string) {
   await connectDB();
