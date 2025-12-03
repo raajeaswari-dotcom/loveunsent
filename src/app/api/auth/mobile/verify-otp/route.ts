@@ -21,14 +21,10 @@ export async function POST(req: NextRequest) {
         let verify = await verifyOTP(phone, "mobile", code);
 
         if (!verify.success) {
-            // If verification failed but we have a name (signup flow), check if it was ALREADY verified
-            if (name) {
-                const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", code);
-                if (isAlreadyVerified) {
-                    verify = { success: true, message: "OTP already verified" };
-                } else {
-                    return errorResponse(verify.message, 400);
-                }
+            // Check if it was ALREADY verified (handle double-clicks or network retries)
+            const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", code);
+            if (isAlreadyVerified) {
+                verify = { success: true, message: "OTP already verified" };
             } else {
                 return errorResponse(verify.message, 400);
             }

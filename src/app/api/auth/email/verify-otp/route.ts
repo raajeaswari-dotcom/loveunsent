@@ -26,17 +26,13 @@ export async function POST(req: NextRequest) {
     console.log(`🔐 [VerifyOTP] Initial check result:`, verify);
 
     if (!verify.success) {
-      // If verification failed but we have a name (signup flow), check if it was ALREADY verified
-      if (name) {
-        console.log(`🔐 [VerifyOTP] Checking if already verified...`);
-        const isAlreadyVerified = await checkVerifiedOTP(email, "email", code);
-        console.log(`🔐 [VerifyOTP] Already verified? ${isAlreadyVerified}`);
+      // Check if it was ALREADY verified (handle double-clicks or network retries)
+      console.log(`🔐 [VerifyOTP] Verification failed, checking if already verified...`);
+      const isAlreadyVerified = await checkVerifiedOTP(email, "email", code);
+      console.log(`🔐 [VerifyOTP] Already verified? ${isAlreadyVerified}`);
 
-        if (isAlreadyVerified) {
-          verify = { success: true, message: "OTP already verified" };
-        } else {
-          return NextResponse.json({ message: verify.message }, { status: 400 });
-        }
+      if (isAlreadyVerified) {
+        verify = { success: true, message: "OTP already verified" };
       } else {
         return NextResponse.json({ message: verify.message }, { status: 400 });
       }
