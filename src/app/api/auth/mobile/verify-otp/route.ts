@@ -13,37 +13,40 @@ export async function POST(req: NextRequest) {
 
         let { phone, code, name } = body;
 
-        // Normalize phone (remove spaces, ensure string)
+        // Normalize phone - remove ALL spaces, ensure string
         if (phone) phone = String(phone).replace(/\s+/g, '').trim();
+        // Ensure code is a string
+        if (code) code = String(code).trim();
 
         // DEBUG: log incoming payload
-        console.log(`🔍 [VerifyMobileOTP] Incoming payload: phone=${phone}, code="${code}", namePresent=${!!name}`);
+        console.log(`🔍 [VerifyMobileOTP] Incoming: phone="${phone}", code="${code}", name="${name || 'N/A'}"`);
 
         if (!phone || !code) {
-            console.log("🔍 [VerifyMobileOTP] Missing phone or code");
+            console.log("🔍 [VerifyMobileOTP] ❌ Missing phone or code");
             return errorResponse("Phone and OTP code are required", 400);
         }
 
         // STEP 1 — Verify OTP
-        let verify = await verifyOTP(phone, "mobile", String(code));
+        let verify = await verifyOTP(phone, "mobile", code);
         console.log(`🔍 [VerifyMobileOTP] verifyOTP result:`, verify);
 
         if (!verify.success) {
             // Check if it was ALREADY verified (handle double-clicks or network retries)
             console.log(`🔍 [VerifyMobileOTP] Verification failed, checking if already verified...`);
-            const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", String(code));
+            const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", code);
             console.log(`🔍 [VerifyMobileOTP] checkVerifiedOTP: ${isAlreadyVerified}`);
 
             if (isAlreadyVerified) {
                 verify = { success: true, message: "OTP already verified" };
             } else {
-                console.log("🔍 [VerifyMobileOTP] Final result: invalid OTP");
+                console.log("🔍 [VerifyMobileOTP] ❌ Final result: invalid OTP");
                 return errorResponse(verify.message, 400);
             }
         }
 
+        console.log("🔍 [VerifyMobileOTP] ✅ OTP verification passed!");
+
         // STEP 2 — Check if this is an ADD operation (user already logged in)
-        // Get the token to see if user is already authenticated
         const token = req.cookies.get('token')?.value;
         let existingUserId = null;
 
@@ -61,31 +64,27 @@ export async function POST(req: NextRequest) {
         if (existingUserId) {
             let user = await User.findById(existingUserId);
             if (user) {
-                // Check if phone number is already on a different user (duplicate from previous bug)
+                // Check if phone number is already on a different user
                 const existingPhoneUser = await User.findOne({
                     phone,
-                    _id: { $ne: existingUserId } // Not the current user
+                    _id: { $ne: existingUserId }
                 });
 
                 if (existingPhoneUser) {
-                    console.log(`🔧 [VerifyMobileOTP] Found duplicate user with phone ${phone}, checking if safe to remove...`);
+                    console.log(`🔧 [VerifyMobileOTP] Found duplicate user with phone ${phone}`);
 
-                    // If the duplicate user has no email and no orders, it's likely an orphaned account from the bug
-                    // We can safely remove the phone from it or delete it
                     if (!existingPhoneUser.email || existingPhoneUser.email === '') {
-                        console.log(`🔧 [VerifyMobileOTP] Removing phone from duplicate orphaned account`);
+                        console.log(`🔧 [VerifyMobileOTP] Removing phone from orphaned account`);
                         existingPhoneUser.phone = null;
                         existingPhoneUser.phoneVerified = false;
                         await existingPhoneUser.save();
                     } else {
-                        // Phone belongs to a real account with email - can't proceed
                         return NextResponse.json({
-                            message: "This mobile number is already associated with another account. Please use a different number or login to that account."
+                            message: "This mobile number is already associated with another account."
                         }, { status: 400 });
                     }
                 }
 
-                // Update the existing user with the new phone number
                 user.phone = phone;
                 user.phoneVerified = true;
                 await user.save();
@@ -104,7 +103,6 @@ export async function POST(req: NextRequest) {
                     message: "Mobile number added and verified successfully!",
                 });
 
-                // Keep the same token (same user)
                 response.cookies.set("token", token as string, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
@@ -121,8 +119,9 @@ export async function POST(req: NextRequest) {
         let user = await User.findOne({ phone });
         const isNewUser = !user;
 
-        // → New user flow - ask for name if not provided
+        // New user flow - ask for name if not provided
         if (isNewUser && (!name || name.trim().length < 2)) {
+            console.log("🔍 [VerifyMobileOTP] New user, requesting name");
             return NextResponse.json(
                 {
                     isNewUser: true,
@@ -141,21 +140,22 @@ export async function POST(req: NextRequest) {
                 role: "customer",
                 phoneVerified: true,
             });
+            console.log("🔍 [VerifyMobileOTP] ✅ Created new user:", user._id);
         } else {
-            // Update existing user's phone verification status
             if (!user.phoneVerified) {
                 user.phoneVerified = true;
                 await user.save();
             }
+            console.log("🔍 [VerifyMobileOTP] ✅ Existing user login:", user._id);
         }
 
         // STEP 3 — Generate JWT
         const newToken = signJwt({
-            userId: user._id, // Fixed: use 'userId' to match email auth
+            userId: user._id,
             role: user.role,
         });
 
-        // STEP 4 — Set cookie
+        // STEP 4 — Set cookie and return
         const response = successResponse({
             user: {
                 id: user._id,
@@ -173,13 +173,14 @@ export async function POST(req: NextRequest) {
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
-            maxAge: 60 * 60 * 24 * 7, // 7 days
+            maxAge: 60 * 60 * 24 * 7,
         });
 
+        console.log("🔍 [VerifyMobileOTP] ✅ Login successful, token set");
         return response;
 
     } catch (error) {
-        console.error("Verify mobile OTP error:", error);
+        console.error("❌ [VerifyMobileOTP] Critical error:", error);
         return errorResponse("Internal Server Error", 500);
     }
 }

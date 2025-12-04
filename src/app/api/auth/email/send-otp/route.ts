@@ -57,19 +57,23 @@ export async function POST(req: NextRequest) {
       userAgent,
     });
 
-    console.log(`📧 OTP generated for ${email}:`, code);
+    console.log(`📧 [SendEmailOTP] OTP generated for ${email}: "${code}"`);
 
     /* -----------------------------------------
-       4. SEND OTP VIA EMAIL
+       4. SEND OTP VIA EMAIL (skip if MASTER_OTP mode)
     ------------------------------------------ */
-    const sent = await emailService.sendOTP(email, code);
+    if (process.env.MASTER_OTP) {
+      console.log(`📧 [SendEmailOTP] MASTER_OTP mode - skipping email send. Use code: "${process.env.MASTER_OTP.trim()}"`);
+    } else {
+      const sent = await emailService.sendOTP(email, code);
 
-    if (!sent) {
-      console.error(`❌ Failed to send OTP to ${email}`);
-      return errorResponse("Failed to send OTP. Please try again.", 500);
+      if (!sent) {
+        console.error(`❌ [SendEmailOTP] Failed to send OTP to ${email}`);
+        return errorResponse("Failed to send OTP. Please try again.", 500);
+      }
+
+      console.log(`✅ [SendEmailOTP] Email sent successfully to ${email}`);
     }
-
-    console.log(`✅ Email OTP sent successfully to ${email}`);
 
     /* -----------------------------------------
        5. SUCCESS RESPONSE

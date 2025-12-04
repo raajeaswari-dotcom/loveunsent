@@ -174,7 +174,10 @@ export default function AuthPage() {
             // 🔍 DEBUG: Response log
             console.log("🔐 [Client] verify response:", res.status, data);
 
-            if (data.isNewUser && !name) {
+            // Handle successResponse wrapper: { success: true, data: { user, isNewUser, message } }
+            const responseData = data.data || data;
+
+            if (responseData.isNewUser && !name) {
                 setIsNewUser(true);
                 setStep("name");
                 setLoading(false);
@@ -183,11 +186,13 @@ export default function AuthPage() {
 
             if (!res.ok) {
                 setError(data.message || "Invalid OTP");
-                // Don't clear OTP on error immediately, let user correct it
-                // setOtp(["", "", "", "", "", ""]); 
-                otpRefs.current[5]?.focus(); // Focus last or first? Maybe keep focus.
+                // Don't clear OTP on error
+                otpRefs.current[5]?.focus();
             } else {
-                login(data.user);
+                // Extract user from correct location
+                const user = responseData.user;
+                console.log("🔐 [Client] Logged in user:", user);
+                login(user);
                 setSuccess("Login successful!");
                 setTimeout(() => router.push("/dashboard"), 500);
             }

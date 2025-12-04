@@ -23,9 +23,12 @@ export async function POST(req: NextRequest) {
       return errorResponse("Validation Error", 400, result.error.format());
     }
 
-    const { phone, purpose } = result.data;
+    let { phone, purpose } = result.data;
 
-    console.log('📱 Mobile OTP Request:', { phone, purpose });
+    // Normalize phone number - remove spaces, ensure consistent format
+    phone = phone.replace(/\s+/g, '').trim();
+
+    console.log('📱 [SendMobileOTP] Request:', { phone, purpose });
 
     // Rate limit
     const rateLimit = await checkOTPRateLimit(phone, "mobile");
@@ -45,16 +48,19 @@ export async function POST(req: NextRequest) {
       userAgent,
     });
 
-    console.log(`📱 Mobile OTP created for ${phone}:`, code);
+    console.log(`📱 [SendMobileOTP] OTP created for ${phone}: "${code}"`);
 
-    // Send SMS
-    const sent = await smsService.sendOTP(phone, code);
-    if (!sent) {
-      console.error(`❌ Failed to send mobile OTP to ${phone}`);
-      return errorResponse("Failed to send OTP", 500);
+    // Send SMS (skip if MASTER_OTP is set)
+    if (process.env.MASTER_OTP) {
+      console.log(`📱 [SendMobileOTP] MASTER_OTP mode - skipping SMS send. Use code: "${process.env.MASTER_OTP.trim()}"`);
+    } else {
+      const sent = await smsService.sendOTP(phone, code);
+      if (!sent) {
+        console.error(`❌ [SendMobileOTP] Failed to send SMS to ${phone}`);
+        return errorResponse("Failed to send OTP", 500);
+      }
+      console.log(`✅ [SendMobileOTP] SMS sent successfully to ${phone}`);
     }
-
-    console.log(`✅ Mobile OTP sent successfully to ${phone}`);
 
     return successResponse({
       message: "OTP sent successfully",
