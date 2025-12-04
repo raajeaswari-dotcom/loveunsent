@@ -4,13 +4,22 @@ export const getCloudinaryUrl = (path: string) => {
     // If no Cloudinary configuration or no path, return local public path
     if (!cloudName || !path) {
         // Ensure path starts with / for Next.js public folder
-        return path.startsWith('/') ? path : `/${path}`;
+        return path && path.startsWith('/') ? path : `/${path || ''}`;
     }
 
-    // If it's already a full URL, return it (and fix common malformed protocols)
-    if (path.startsWith('http')) {
-        return path.replace('https:/res', 'https://res').replace('http:/res', 'http://res');
+    // FIX: Handle malformed protocols (https:/ instead of https://)
+    // This often happens if data was saved incorrectly
+    if (path.includes('https:/') || path.includes('http:/')) {
+        let fixed = path.replace('https:/', 'https://').replace('http:/', 'http://');
+        // Fix double slash if it became https:///
+        fixed = fixed.replace('https:///', 'https://').replace('http:///', 'http://');
+
+        // If it starts with http now, return it
+        if (fixed.startsWith('http')) return fixed;
     }
+
+    // If it's already a full URL, return it
+    if (path.startsWith('http')) return path;
 
     // Remove leading slash if present
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
