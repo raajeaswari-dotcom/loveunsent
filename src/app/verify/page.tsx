@@ -62,6 +62,22 @@ function VerifyContent() {
         }
     }, [resendTimer]);
 
+    // Format phone number to include +91 prefix
+    const formatPhone = (phone: string): string => {
+        if (!phone) return phone;
+        const cleaned = phone.replace(/\D/g, '');
+        if (cleaned.startsWith('91') && cleaned.length > 2) {
+            return '+' + cleaned;
+        }
+        if (cleaned.length === 10) {
+            return '+91' + cleaned;
+        }
+        if (phone.startsWith('+')) {
+            return phone;
+        }
+        return '+91' + cleaned;
+    };
+
     const handleSendOTP = async (e?: React.FormEvent) => {
         e?.preventDefault();
         setError('');
@@ -71,9 +87,14 @@ function VerifyContent() {
             ? '/api/auth/email/send-otp'
             : '/api/auth/mobile/send-otp';
 
+        // Format phone number for mobile
+        const formattedIdentifier = type === 'mobile' ? formatPhone(identifier) : identifier.toLowerCase().trim();
+
+        console.log(`🔍 [VerifyPage] Sending OTP: type=${type}, identifier=${formattedIdentifier}`);
+
         const body = type === 'email'
-            ? { email: identifier, purpose: 'verification' }
-            : { phone: identifier, purpose: 'verification' };
+            ? { email: formattedIdentifier, purpose: 'verification' }
+            : { phone: formattedIdentifier, purpose: 'verification' };
 
         try {
             const res = await fetch(endpoint, {
@@ -109,9 +130,14 @@ function VerifyContent() {
             ? '/api/auth/email/verify-otp'
             : '/api/auth/mobile/verify-otp';
 
+        // Format phone number for mobile (must match send-otp)
+        const formattedIdentifier = type === 'mobile' ? formatPhone(identifier) : identifier.toLowerCase().trim();
+
+        console.log(`🔍 [VerifyPage] Verifying OTP: type=${type}, identifier=${formattedIdentifier}, code=${otpCode}`);
+
         const body = type === 'email'
-            ? { email: identifier, code: otpCode }
-            : { phone: identifier, code: otpCode };
+            ? { email: formattedIdentifier, code: otpCode }
+            : { phone: formattedIdentifier, code: otpCode };
 
         try {
             const res = await fetch(endpoint, {
