@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
+import { CustomizationProvider } from "../context/CustomizationContext";
 import Header from "../components/Header";
 import { Footer } from "../components/Footer";
 import { ReactNode } from "react";
@@ -28,9 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main>{children}</main>
-            <Footer />
+            <CustomizationProvider>
+              <Header />
+              <main>{children}</main>
+              <Footer />
+            </CustomizationProvider>
           </CartProvider>
         </AuthProvider>
       </body>
