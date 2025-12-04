@@ -7,8 +7,10 @@ export const getCloudinaryUrl = (path: string) => {
         return path.startsWith('/') ? path : `/${path}`;
     }
 
-    // If it's already a full URL, return it
-    if (path.startsWith('http')) return path;
+    // If it's already a full URL, return it (and fix common malformed protocols)
+    if (path.startsWith('http')) {
+        return path.replace('https:/res', 'https://res').replace('http:/res', 'http://res');
+    }
 
     // Remove leading slash if present
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
