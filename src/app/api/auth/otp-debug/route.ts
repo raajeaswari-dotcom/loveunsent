@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         const cleanPhone = phone.replace(/[\s\r\n\t]/g, '').trim().toLowerCase();
 
         // Get latest OTP
-        const latestOTP = await OTP.findOne({
+        const latestOTP: any = await OTP.findOne({
             identifier: cleanPhone,
             type: "mobile"
         }).sort({ createdAt: -1 }).lean();
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
             masterOtpRawLength: rawMasterOtp?.length,
             masterOtpCleanedLength: masterOtp?.length,
             latestOTP: latestOTP ? {
-                id: latestOTP._id,
+                id: String(latestOTP._id),
                 identifier: latestOTP.identifier,
                 code: latestOTP.code,
                 type: latestOTP.type,
