@@ -64,19 +64,49 @@ export default function CheckoutPage() {
         e.preventDefault();
         setIsProcessing(true);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Call the real order creation API
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    items: cart.map(item => ({
+                        paperId: item.details?.paperId || 'ordinary',
+                        handwritingStyleId: item.details?.handwritingStyleId || 'default',
+                        perfumeId: item.details?.perfumeId,
+                        addOns: item.details?.addonIds || [],
+                        messageContent: item.details?.message,
+                        wordCount: item.details?.wordCount
+                    })),
+                    shippingAddress: {
+                        street: formData.address,
+                        city: formData.city,
+                        state: formData.state,
+                        zip: formData.zip,
+                        country: 'India'
+                    }
+                })
+            });
 
-        const order = await mockApi.createOrder({
-            customer: formData,
-            items: cart,
-            total: cart.reduce((acc, item) => acc + item.price, 0)
-        });
+            const result = await response.json();
 
-        console.log('Order placed:', order);
-        localStorage.removeItem('cart');
-        alert('Order placed successfully! (Mock)');
-        router.push('/');
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to create order');
+            }
+
+            console.log('Order created:', result);
+            localStorage.removeItem('cart');
+            alert('Order placed successfully! Redirecting to payment...');
+
+            // TODO: Integrate Razorpay payment here using result.data.razorpayOrderId
+            router.push('/dashboard?tab=orders');
+        } catch (error: any) {
+            console.error('Order creation error:', error);
+            alert(error.message || 'Failed to place order. Please try again.');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     if (loading) return <div>Loading...</div>;

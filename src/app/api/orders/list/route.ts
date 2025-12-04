@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
         let query: any = {};
 
         // Role-based filtering
+        console.log(`🔍 [OrdersList] User Role: ${decoded.role}, User ID: ${decoded.userId}`);
+
         if (decoded.role === 'customer') {
             query.customerId = decoded.userId;
         } else if (decoded.role === 'writer') {
@@ -36,6 +38,8 @@ export async function GET(req: NextRequest) {
                 { 'fulfillment.assignedQC': decoded.userId }
             ];
         }
+
+        console.log(`🔍 [OrdersList] Query:`, JSON.stringify(query));
 
         // Search
         if (search) {
