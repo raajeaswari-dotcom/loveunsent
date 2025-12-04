@@ -103,7 +103,8 @@ export async function checkVerifiedOTP(identifier: string, type: string, code: s
 
   if (!otpRecord) return false;
 
-  return otpRecord.code.trim() === code.trim();
+  // Must be marked as verified AND match the code
+  return otpRecord.verified === true && otpRecord.code.trim() === code.trim();
 }
 
 /* ---------------------------------------------------------

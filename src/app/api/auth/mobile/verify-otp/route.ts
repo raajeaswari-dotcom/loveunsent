@@ -11,21 +11,33 @@ export async function POST(req: NextRequest) {
         await connectDB();
         const body = await req.json();
 
-        const { phone, code, name } = body;
+        let { phone, code, name } = body;
+
+        // Normalize phone (remove spaces, ensure string)
+        if (phone) phone = String(phone).replace(/\s+/g, '').trim();
+
+        // DEBUG: log incoming payload
+        console.log(`🔍 [VerifyMobileOTP] Incoming payload: phone=${phone}, code="${code}", namePresent=${!!name}`);
 
         if (!phone || !code) {
+            console.log("🔍 [VerifyMobileOTP] Missing phone or code");
             return errorResponse("Phone and OTP code are required", 400);
         }
 
         // STEP 1 — Verify OTP
-        let verify = await verifyOTP(phone, "mobile", code);
+        let verify = await verifyOTP(phone, "mobile", String(code));
+        console.log(`🔍 [VerifyMobileOTP] verifyOTP result:`, verify);
 
         if (!verify.success) {
             // Check if it was ALREADY verified (handle double-clicks or network retries)
-            const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", code);
+            console.log(`🔍 [VerifyMobileOTP] Verification failed, checking if already verified...`);
+            const isAlreadyVerified = await checkVerifiedOTP(phone, "mobile", String(code));
+            console.log(`🔍 [VerifyMobileOTP] checkVerifiedOTP: ${isAlreadyVerified}`);
+
             if (isAlreadyVerified) {
                 verify = { success: true, message: "OTP already verified" };
             } else {
+                console.log("🔍 [VerifyMobileOTP] Final result: invalid OTP");
                 return errorResponse(verify.message, 400);
             }
         }
@@ -56,12 +68,12 @@ export async function POST(req: NextRequest) {
                 });
 
                 if (existingPhoneUser) {
-                    console.log(`🔧 [VerifyOTP] Found duplicate user with phone ${phone}, checking if safe to remove...`);
+                    console.log(`🔧 [VerifyMobileOTP] Found duplicate user with phone ${phone}, checking if safe to remove...`);
 
                     // If the duplicate user has no email and no orders, it's likely an orphaned account from the bug
                     // We can safely remove the phone from it or delete it
                     if (!existingPhoneUser.email || existingPhoneUser.email === '') {
-                        console.log(`🔧 [VerifyOTP] Removing phone from duplicate orphaned account`);
+                        console.log(`🔧 [VerifyMobileOTP] Removing phone from duplicate orphaned account`);
                         existingPhoneUser.phone = null;
                         existingPhoneUser.phoneVerified = false;
                         await existingPhoneUser.save();
