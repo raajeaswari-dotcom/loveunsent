@@ -63,11 +63,16 @@ export async function POST(req: NextRequest) {
     // Continue with existing account creation / sign-in flow...
     const token = req.cookies.get('token')?.value;
     let existingUserId = null;
+
+    console.log(`🔍 [VerifyEmailOTP] Token present: ${!!token}`);
+
     if (token) {
       try {
         const decoded: any = await verifyToken(token);
         existingUserId = decoded?.userId || decoded?.id;
+        console.log(`🔍 [VerifyEmailOTP] Token decoded, existingUserId: ${existingUserId}`);
       } catch (e) {
+        console.log(`🔍 [VerifyEmailOTP] Token invalid or expired`);
         // invalid token -> ignore
       }
     }
@@ -75,7 +80,7 @@ export async function POST(req: NextRequest) {
     if (existingUserId) {
       let user = await User.findById(existingUserId);
       if (user) {
-        const existingEmailUser = await User.findOne({ email, _id: { $ne: existingUserId }});
+        const existingEmailUser = await User.findOne({ email, _id: { $ne: existingUserId } });
         if (existingEmailUser) {
           if (!existingEmailUser.phone || existingEmailUser.phone === '') {
             existingEmailUser.email = null;

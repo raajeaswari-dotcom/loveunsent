@@ -50,12 +50,16 @@ export async function POST(req: NextRequest) {
         const token = req.cookies.get('token')?.value;
         let existingUserId = null;
 
+        console.log(`🔍 [VerifyMobileOTP] Token present: ${!!token}`);
+
         if (token) {
             try {
                 const { verifyToken } = await import("@/lib/auth");
                 const decoded: any = await verifyToken(token);
                 existingUserId = decoded?.userId || decoded?.id;
+                console.log(`🔍 [VerifyMobileOTP] Token decoded, existingUserId: ${existingUserId}`);
             } catch (e) {
+                console.log(`🔍 [VerifyMobileOTP] Token invalid or expired`);
                 // Token invalid, proceed as normal signup/login
             }
         }

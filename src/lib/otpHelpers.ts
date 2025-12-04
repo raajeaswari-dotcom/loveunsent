@@ -7,13 +7,32 @@ import connectDB from "./db";
    Generate OTP
 --------------------------------------------------------- */
 export function generateOTPCode(): string {
-  // MASTER_OTP bypass - trim to remove any whitespace from env var
-  if (process.env.MASTER_OTP) {
-    const masterCode = process.env.MASTER_OTP.trim();
-    console.log(`[OTP] Using MASTER_OTP: "${masterCode}"`);
-    return masterCode;
+  const masterOtp = process.env.MASTER_OTP;
+  if (masterOtp) {
+    // Remove ALL whitespace including newlines, tabs, spaces
+    const cleaned = masterOtp.replace(/[\s\r\n\t]/g, '');
+    console.log(`[OTP] generateOTPCode: Using MASTER_OTP, raw length=${masterOtp.length}, cleaned="${cleaned}", cleanedLength=${cleaned.length}`);
+    return cleaned;
   }
-  return crypto.randomInt(100000, 999999).toString();
+  const code = crypto.randomInt(100000, 999999).toString();
+  console.log(`[OTP] generateOTPCode: Generated random code="${code}"`);
+  return code;
+}
+
+/* ---------------------------------------------------------
+   Normalize identifier (phone/email) - MUST be consistent everywhere
+--------------------------------------------------------- */
+function normalizeIdentifier(identifier: string): string {
+  // Remove ALL whitespace, newlines, tabs, then lowercase
+  return identifier.replace(/[\s\r\n\t]/g, '').trim().toLowerCase();
+}
+
+/* ---------------------------------------------------------
+   Normalize OTP code - MUST be consistent everywhere
+--------------------------------------------------------- */
+function normalizeCode(code: string): string {
+  // Remove ALL whitespace, keep only digits
+  return code.replace(/[\s\r\n\t]/g, '').replace(/\D/g, '');
 }
 
 /* ---------------------------------------------------------
@@ -27,12 +46,11 @@ export async function createOTP(
 ) {
   await connectDB();
 
-  // Normalize identifier - remove spaces, lowercase
-  const cleanIdentifier = identifier.replace(/\s+/g, '').trim().toLowerCase();
+  const cleanIdentifier = normalizeIdentifier(identifier);
   const code = generateOTPCode();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  console.log(`[OTP] Creating OTP for ${type}: identifier="${cleanIdentifier}", code="${code}"`);
+  console.log(`[OTP] createOTP: type="${type}", identifier="${cleanIdentifier}", code="${code}"`);
 
   // invalidate older OTPs
   await OTP.updateMany(
@@ -53,51 +71,51 @@ export async function createOTP(
     },
   });
 
-  console.log(`[OTP] Created OTP record: id=${otp._id}, identifier="${cleanIdentifier}", code="${code}"`);
+  console.log(`[OTP] createOTP: Created OTP id=${otp._id}`);
 
   return otp.code;
 }
 
 /* ---------------------------------------------------------
-   Verify OTP  (FINAL FIX — with MASTER_OTP bypass)
+   Verify OTP  (with robust MASTER_OTP handling)
 --------------------------------------------------------- */
 export async function verifyOTP(identifier: string, type: string, code: string) {
   await connectDB();
 
-  // Normalize identifier - remove spaces, lowercase (same as createOTP)
-  const cleanIdentifier = identifier.replace(/\s+/g, '').trim().toLowerCase();
-  const incoming = code.trim();
+  const cleanIdentifier = normalizeIdentifier(identifier);
+  const incomingCode = normalizeCode(code);
 
-  console.log(`[OTP] Verifying: identifier="${cleanIdentifier}", type="${type}", incoming="${incoming}"`);
+  console.log(`[OTP] verifyOTP START: identifier="${cleanIdentifier}", type="${type}", incomingCode="${incomingCode}"`);
 
-  // MASTER OTP bypass - check this FIRST before any DB lookup
-  const masterOtp = process.env.MASTER_OTP ? process.env.MASTER_OTP.trim() : null;
-  if (masterOtp) {
-    console.log(`[OTP] MASTER_OTP is set: "${masterOtp}", comparing with incoming: "${incoming}"`);
-    if (incoming === masterOtp) {
+  // MASTER OTP bypass - check FIRST before any DB lookup
+  const rawMasterOtp = process.env.MASTER_OTP;
+  if (rawMasterOtp) {
+    const masterOtp = rawMasterOtp.replace(/[\s\r\n\t]/g, '').replace(/\D/g, '');
+    console.log(`[OTP] MASTER_OTP check: rawLength=${rawMasterOtp.length}, cleaned="${masterOtp}", incoming="${incomingCode}"`);
+    console.log(`[OTP] MASTER_OTP char codes: master=[${[...masterOtp].map(c => c.charCodeAt(0)).join(',')}], incoming=[${[...incomingCode].map(c => c.charCodeAt(0)).join(',')}]`);
+
+    if (incomingCode === masterOtp) {
       console.log(`[OTP] ✅ MASTER_OTP matched!`);
       return { success: true, message: "Master OTP accepted" };
     } else {
-      console.log(`[OTP] ❌ MASTER_OTP did NOT match. incoming="${incoming}" vs master="${masterOtp}"`);
+      console.log(`[OTP] ❌ MASTER_OTP did NOT match: "${incomingCode}" !== "${masterOtp}"`);
     }
+  } else {
+    console.log(`[OTP] No MASTER_OTP set, checking database`);
   }
 
-  // FIX: always get latest OTP, regardless of verified status
+  // Database lookup
   const otpRecord = await OTP.findOne({
     identifier: cleanIdentifier,
     type,
   }).sort({ createdAt: -1 });
 
-  console.log(`[OTP] DB lookup result:`, otpRecord ? {
-    id: otpRecord._id,
-    code: otpRecord.code,
-    verified: otpRecord.verified,
-    expiresAt: otpRecord.expiresAt
-  } : 'NOT FOUND');
-
   if (!otpRecord) {
+    console.log(`[OTP] ❌ No OTP record found for identifier="${cleanIdentifier}", type="${type}"`);
     return { success: false, message: "Invalid or expired OTP" };
   }
+
+  console.log(`[OTP] Found OTP record: id=${otpRecord._id}, storedCode="${otpRecord.code}", verified=${otpRecord.verified}, expiresAt=${otpRecord.expiresAt}`);
 
   // expiry check
   if (Date.now() > new Date(otpRecord.expiresAt).getTime()) {
@@ -105,9 +123,10 @@ export async function verifyOTP(identifier: string, type: string, code: string) 
     return { success: false, message: "Expired OTP" };
   }
 
-  // compare codes
-  if (otpRecord.code.trim() !== incoming) {
-    console.log(`[OTP] ❌ Code mismatch: stored="${otpRecord.code.trim()}" vs incoming="${incoming}"`);
+  // compare codes (normalize both)
+  const storedCode = normalizeCode(otpRecord.code);
+  if (storedCode !== incomingCode) {
+    console.log(`[OTP] ❌ Code mismatch: stored="${storedCode}" vs incoming="${incomingCode}"`);
     return { success: false, message: "Invalid OTP" };
   }
 
@@ -119,12 +138,13 @@ export async function verifyOTP(identifier: string, type: string, code: string) 
 }
 
 /* ---------------------------------------------------------
-   Check Verified OTP
+   Check Verified OTP (for retry handling)
 --------------------------------------------------------- */
 export async function checkVerifiedOTP(identifier: string, type: string, code: string) {
   await connectDB();
 
-  const cleanIdentifier = identifier.replace(/\s+/g, '').trim().toLowerCase();
+  const cleanIdentifier = normalizeIdentifier(identifier);
+  const incomingCode = normalizeCode(code);
 
   const otpRecord = await OTP.findOne({
     identifier: cleanIdentifier,
@@ -133,8 +153,8 @@ export async function checkVerifiedOTP(identifier: string, type: string, code: s
 
   if (!otpRecord) return false;
 
-  // Must be marked as verified AND match the code
-  return otpRecord.verified === true && otpRecord.code.trim() === code.trim();
+  const storedCode = normalizeCode(otpRecord.code);
+  return otpRecord.verified === true && storedCode === incomingCode;
 }
 
 /* ---------------------------------------------------------
@@ -143,7 +163,7 @@ export async function checkVerifiedOTP(identifier: string, type: string, code: s
 export async function checkOTPRateLimit(identifier: string, type: string) {
   await connectDB();
 
-  const cleanIdentifier = identifier.replace(/\s+/g, '').trim().toLowerCase();
+  const cleanIdentifier = normalizeIdentifier(identifier);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
   const count = await OTP.countDocuments({
@@ -168,7 +188,7 @@ export async function checkOTPRateLimit(identifier: string, type: string) {
 export async function getVerificationStatus(identifier: string) {
   await connectDB();
 
-  const user = await User.findOne({ identifier: identifier.replace(/\s+/g, '').trim().toLowerCase() });
+  const user = await User.findOne({ identifier: normalizeIdentifier(identifier) });
   if (!user) return null;
 
   return {
