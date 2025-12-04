@@ -33,6 +33,7 @@ const PUBLIC_PATHS = [
   "/api/auth/mobile/send-otp",
   "/api/auth/mobile/verify-otp",
   "/api/auth/debug",  // Debug endpoint
+  "/api/auth/otp-debug",  // OTP debug endpoint
   "/api/admin/auth/verify-otp",
   "/api/auth/me",
   "/api/auth/logout",
