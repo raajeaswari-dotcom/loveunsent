@@ -1,5 +1,62 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
+// Address subdocument schema
+const AddressSchema = new Schema({
+  recipientName: {
+    type: String,
+    required: [true, "Recipient name is required"],
+    trim: true,
+  },
+  recipientPhone: {
+    type: String,
+    required: [true, "Recipient phone is required"],
+    trim: true,
+  },
+  addressLine1: {
+    type: String,
+    required: [true, "Address line 1 is required"],
+    trim: true,
+  },
+  addressLine2: {
+    type: String,
+    trim: true,
+  },
+  landmark: {
+    type: String,
+    trim: true,
+  },
+  city: {
+    type: String,
+    required: [true, "City is required"],
+    trim: true,
+  },
+  state: {
+    type: String,
+    required: [true, "State is required"],
+    trim: true,
+  },
+  pincode: {
+    type: String,
+    required: [true, "PIN code is required"],
+    trim: true,
+    validate: {
+      validator: function (v: string) {
+        return /^\d{6}$/.test(v);
+      },
+      message: "PIN code must be exactly 6 digits",
+    },
+  },
+  country: {
+    type: String,
+    default: "India",
+    trim: true,
+  },
+  isDefault: {
+    type: Boolean,
+    default: false,
+  },
+}, { _id: true }); // Enable _id for subdocuments
+
 const UserSchema = new Schema(
   {
     name: {
@@ -87,16 +144,7 @@ const UserSchema = new Schema(
       default: false,
     },
 
-    addresses: [
-      {
-        street: String,
-        city: String,
-        state: String,
-        zip: String,
-        country: String,
-        isDefault: Boolean,
-      },
-    ],
+    addresses: [AddressSchema],
 
     isActive: { type: Boolean, default: true },
   },

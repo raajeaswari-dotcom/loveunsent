@@ -40,8 +40,6 @@ export default function CustomizePageContent() {
   const [loading, setLoading] = useState(true);
   const [occasion, setOccasion] = useState<string>("");
   const [inkColor, setInkColor] = useState<string>("Blue");
-  const [recipientName, setRecipientName] = useState<string>("");
-  const [recipientAddress, setRecipientAddress] = useState<string>("");
 
   // Contexts
   const { state, updateState } = useCustomization();
@@ -87,8 +85,8 @@ export default function CustomizePageContent() {
       alert("Please select a paper.");
       return;
     }
-    if (!recipientName.trim() || !recipientAddress.trim()) {
-      alert("Please complete recipient details.");
+    if (!state.recipientAddressId) {
+      alert("Please select or add a recipient address.");
       return;
     }
 
@@ -103,8 +101,6 @@ export default function CustomizePageContent() {
         breakdown,
         occasion,
         inkColor,
-        recipientName,
-        recipientAddress,
       },
     });
     router.push("/checkout");
@@ -148,10 +144,8 @@ export default function CustomizePageContent() {
                 addons={addons}
                 inkColor={inkColor}
                 setInkColor={setInkColor}
-                recipientName={recipientName}
-                setRecipientName={setRecipientName}
-                recipientAddress={recipientAddress}
-                setRecipientAddress={setRecipientAddress}
+                selectedAddressId={state.recipientAddressId}
+                onSelectAddress={(addressId) => updateState({ recipientAddressId: addressId })}
               />
             </Card>
           </div>

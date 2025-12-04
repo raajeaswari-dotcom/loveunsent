@@ -3,104 +3,138 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { mockApi } from '@/lib/mockApi';
 import { useRouter } from 'next/navigation';
+import { MapPin, Trash2 } from 'lucide-react';
 
 export default function CheckoutPage() {
     const router = useRouter();
     const [cart, setCart] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
-
-    // Form State
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        address: '',
-        city: '',
-        state: '',
-        zip: '',
-    });
-    const [isCheckingPincode, setIsCheckingPincode] = useState(false);
+    const [userAddresses, setUserAddresses] = useState<any[]>([]);
+    const [paymentMethods, setPaymentMethods] = useState<{ [key: string]: 'cod' | 'online' }>({});
 
     useEffect(() => {
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
-            setCart(JSON.parse(savedCart));
+            const parsedCart = JSON.parse(savedCart);
+            setCart(parsedCart);
+
+            // Initialize payment methods to COD by default
+            const initialPaymentMethods: { [key: string]: 'cod' | 'online' } = {};
+            parsedCart.forEach((item: any) => {
+                initialPaymentMethods[item.id] = 'cod';
+            });
+            setPaymentMethods(initialPaymentMethods);
         }
+        fetchAddresses();
         setLoading(false);
     }, []);
 
-    const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-
-        // Pincode Lookup Logic
-        if (name === 'zip' && value.length === 6) {
-            setIsCheckingPincode(true);
-            try {
-                const res = await fetch(`https://api.postalpincode.in/pincode/${value}`);
-                const data = await res.json();
-
-                if (data[0].Status === 'Success') {
-                    const details = data[0].PostOffice[0];
-                    setFormData(prev => ({
-                        ...prev,
-                        city: details.District,
-                        state: details.State,
-                        zip: value
-                    }));
-                }
-            } catch (error) {
-                console.error("Failed to fetch pincode details", error);
-            } finally {
-                setIsCheckingPincode(false);
+    const fetchAddresses = async () => {
+        try {
+            const response = await fetch('/api/user/addresses');
+            if (response.ok) {
+                const result = await response.json();
+                setUserAddresses(result.data?.addresses || []);
             }
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const getAddressById = (addressId: string) => {
+        return userAddresses.find(addr => addr._id === addressId);
+    };
+
+    const removeFromCart = (itemId: string) => {
+        console.log('Removing item from cart:', itemId);
+        const updatedCart = cart.filter(item => item.id !== itemId);
+        console.log('Updated cart:', updatedCart);
+        setCart(updatedCart);
+        localStorage.setItem('cart', JSON.stringify(updatedCart));
+    };
+
+    const handlePlaceOrder = async (item: any) => {
+        const addressId = item.details?.recipientAddressId;
+
+        if (!addressId) {
+            alert('No delivery address found for this item. Please customize again.');
+            return;
+        }
+
+        const address = getAddressById(addressId);
+
+        if (!address) {
+            alert('Delivery address not found. Please add the address in your profile.');
+            return;
+        }
+
+        console.log('Selected address object:', address);
+
+        // Validate address completeness
+        if (!address.recipientName || !address.recipientPhone || !address.addressLine1 || !address.pincode) {
+            alert('This delivery address is incomplete or uses an old format. Please go to your Profile, delete this address, and add it again.');
+            return;
+        }
+
         setIsProcessing(true);
 
         try {
-            // Call the real order creation API
+            const paymentMethod = paymentMethods[item.id] || 'cod';
+
+            const orderData = {
+                items: [{
+                    paperId: item.details?.paperId || 'ordinary',
+                    handwritingStyleId: item.details?.handwritingStyleId || 'default',
+                    perfumeId: item.details?.perfumeId,
+                    addOns: item.details?.addonIds || [],
+                    messageContent: item.details?.message,
+                    wordCount: item.details?.wordCount,
+                    inkColor: item.details?.inkColor
+                }],
+                paymentMethod: paymentMethod,
+                shippingAddress: {
+                    fullName: address.recipientName,
+                    phone: address.recipientPhone,
+                    addressLine1: address.addressLine1,
+                    addressLine2: address.addressLine2 || '',
+                    city: address.city,
+                    state: address.state,
+                    pincode: address.pincode,
+                    country: address.country || 'India'
+                }
+            };
+
+            console.log('Sending order data:', orderData);
+
             const response = await fetch('/api/orders/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    items: cart.map(item => ({
-                        paperId: item.details?.paperId || 'ordinary',
-                        handwritingStyleId: item.details?.handwritingStyleId || 'default',
-                        perfumeId: item.details?.perfumeId,
-                        addOns: item.details?.addonIds || [],
-                        messageContent: item.details?.message,
-                        wordCount: item.details?.wordCount
-                    })),
-                    shippingAddress: {
-                        street: formData.address,
-                        city: formData.city,
-                        state: formData.state,
-                        zip: formData.zip,
-                        country: 'India'
-                    }
-                })
+                body: JSON.stringify(orderData)
             });
 
             const result = await response.json();
+            console.log('Order response:', result);
 
             if (!response.ok) {
                 throw new Error(result.message || 'Failed to create order');
             }
 
             console.log('Order created:', result);
-            localStorage.removeItem('cart');
-            alert('Order placed successfully! Redirecting to payment...');
 
-            // TODO: Integrate Razorpay payment here using result.data.razorpayOrderId
-            router.push('/dashboard?tab=orders');
+            // Remove this item from cart
+            removeFromCart(item.id);
+
+            if (paymentMethod === 'cod') {
+                alert('Order placed successfully with Cash on Delivery! You can track your order in the dashboard.');
+                router.push('/dashboard?tab=orders');
+            } else {
+                alert('Order placed successfully! Redirecting to payment...');
+                // TODO: Integrate Razorpay payment here
+                router.push('/dashboard?tab=orders');
+            }
         } catch (error: any) {
             console.error('Order creation error:', error);
             alert(error.message || 'Failed to place order. Please try again.');
@@ -109,7 +143,7 @@ export default function CheckoutPage() {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <div className="container py-20 text-center">Loading...</div>;
 
     if (cart.length === 0) {
         return (
@@ -123,100 +157,165 @@ export default function CheckoutPage() {
     const total = cart.reduce((acc, item) => acc + item.price, 0);
 
     return (
-        <div className="container max-w-4xl py-10 px-4">
-            <h1 className="text-3xl font-serif font-bold mb-8">Checkout</h1>
+        <div className="container max-w-6xl py-10 px-4">
+            <h1 className="text-3xl font-serif font-bold mb-8">Shopping Cart</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Shipping Form */}
-                <div className="space-y-6">
-                    <Card className="p-6">
-                        <h2 className="text-xl font-semibold mb-4">Shipping Details</h2>
-                        <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Full Name</label>
-                                <Input required name="name" value={formData.name} onChange={handleInputChange} placeholder="John Doe" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Email</label>
-                                <Input required type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="john@example.com" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Address</label>
-                                <Input required name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main St" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">City</label>
-                                    <Input required name="city" value={formData.city} onChange={handleInputChange} placeholder="New York" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Side - Cart Items */}
+                <div className="lg:col-span-2 space-y-4">
+                    {cart.map((item) => {
+                        const addressId = item.details?.recipientAddressId;
+                        const address = addressId ? getAddressById(addressId) : null;
+
+                        return (
+                            <Card key={item.id} className="p-6">
+                                <div className="flex gap-4">
+                                    {/* Item Details */}
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-semibold text-lg text-gray-900">
+                                                    {item.name || 'Custom Letter'}
+                                                </h3>
+                                                <p className="text-2xl font-bold text-[rgb(81,19,23)] mt-1">
+                                                    ₹{item.price}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                onClick={() => removeFromCart(item.id)}
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </Button>
+                                        </div>
+
+                                        {/* Message Preview */}
+                                        {item.details?.message && (
+                                            <div className="bg-gray-50 p-3 rounded-lg">
+                                                <p className="text-sm font-medium text-gray-700 mb-1">Message:</p>
+                                                <p className="text-sm text-gray-600 line-clamp-3">
+                                                    {item.details.message}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Customization Details */}
+                                        <div className="flex flex-wrap gap-3 text-sm">
+                                            {item.details?.paperId && (
+                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
+                                                    Paper: {item.details.paperId}
+                                                </span>
+                                            )}
+                                            {item.details?.inkColor && (
+                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
+                                                    Ink: {item.details.inkColor}
+                                                </span>
+                                            )}
+                                            {item.details?.addonIds?.length > 0 && (
+                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
+                                                    Add-ons: {item.details.addonIds.length}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Delivery Address */}
+                                        <div className="border-t pt-3 mt-3">
+                                            <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                                <MapPin className="w-4 h-4" />
+                                                Delivery Address:
+                                            </p>
+                                            {address ? (
+                                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-sm">
+                                                    <p className="font-semibold text-gray-900">{address.recipientName}</p>
+                                                    <p className="text-gray-600">{address.recipientPhone}</p>
+                                                    <p className="text-gray-700 mt-1">
+                                                        {address.addressLine1}
+                                                        {address.addressLine2 && `, ${address.addressLine2}`}
+                                                    </p>
+                                                    <p className="text-gray-700">
+                                                        {address.city}, {address.state} - {address.pincode}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-sm text-red-700">
+                                                    ⚠️ No delivery address found. Please customize this item again.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Payment Method Selection */}
+                                        <div className="border-t pt-3 mt-3">
+                                            <p className="text-sm font-medium text-gray-700 mb-2">Payment Method:</p>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
+                                                    <input
+                                                        type="radio"
+                                                        name={`payment-${item.id}`}
+                                                        checked={(paymentMethods[item.id] || 'cod') === 'cod'}
+                                                        onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'cod' })}
+                                                        className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
+                                                    />
+                                                    <span className="text-sm font-medium">Cash on Delivery</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
+                                                    <input
+                                                        type="radio"
+                                                        name={`payment-${item.id}`}
+                                                        checked={paymentMethods[item.id] === 'online'}
+                                                        onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'online' })}
+                                                        className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
+                                                    />
+                                                    <span className="text-sm font-medium">Online Payment</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {/* Place Order Button */}
+                                        <Button
+                                            className="w-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] mt-3"
+                                            size="lg"
+                                            disabled={isProcessing || !address}
+                                            onClick={() => handlePlaceOrder(item)}
+                                        >
+                                            {isProcessing ? 'Processing...' : ((paymentMethods[item.id] || 'cod') === 'cod' ? 'Place Order (COD)' : 'Pay Now')}
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">State</label>
-                                    <Input required name="state" value={formData.state} onChange={handleInputChange} placeholder="NY" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">ZIP / Pincode</label>
-                                <div className="relative">
-                                    <Input
-                                        required
-                                        name="zip"
-                                        value={formData.zip}
-                                        onChange={handleInputChange}
-                                        placeholder="110001"
-                                        maxLength={6}
-                                    />
-                                    {isCheckingPincode && (
-                                        <span className="absolute right-3 top-2 text-xs text-muted-foreground animate-pulse">
-                                            Checking...
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </form>
-                    </Card>
+                            </Card>
+                        );
+                    })}
                 </div>
 
-                {/* Order Summary */}
-                <div className="space-y-6">
-                    <Card className="p-6 bg-muted/30">
-                        <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+                {/* Right Side - Cart Summary */}
+                <div className="lg:col-span-1">
+                    <Card className="p-6 bg-muted/30 sticky top-24">
+                        <h2 className="text-xl font-semibold mb-4">Cart Summary</h2>
                         <div className="space-y-4">
-                            {cart.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm border-b pb-2">
-                                    <div>
-                                        <p className="font-medium">Custom Letter</p>
-                                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">{item.message}</p>
-                                    </div>
-                                    <span className="font-medium">₹{item.price}</span>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span>Items ({cart.length})</span>
+                                    <span>₹{total}</span>
                                 </div>
-                            ))}
+                                <div className="flex justify-between text-sm">
+                                    <span>Shipping</span>
+                                    <span className="text-green-600">Free</span>
+                                </div>
+                            </div>
 
-                            <div className="flex justify-between pt-2">
-                                <span>Subtotal</span>
-                                <span>₹{total}</span>
+                            <div className="border-t pt-4">
+                                <div className="flex justify-between text-lg font-bold">
+                                    <span>Total</span>
+                                    <span className="text-[rgb(81,19,23)]">₹{total}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span>Shipping</span>
-                                <span>Free</span>
-                            </div>
-                            <div className="flex justify-between border-t pt-4 text-lg font-bold">
-                                <span>Total</span>
-                                <span>₹{total}</span>
+
+                            <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                                <p className="font-medium text-blue-900 mb-1">ℹ️ How it works:</p>
+                                <p>Each letter is a separate order. Click "Place Order & Pay" on each item to complete your purchase.</p>
                             </div>
                         </div>
-
-                        <Button
-                            type="submit"
-                            form="checkout-form"
-                            className="w-full mt-6"
-                            size="lg"
-                            disabled={isProcessing}
-                        >
-                            {isProcessing ? 'Processing...' : 'Pay Now'}
-                        </Button>
-                        <p className="text-xs text-center mt-2 text-muted-foreground">
-                            Secure payment via Razorpay (Mock)
-                        </p>
                     </Card>
                 </div>
             </div>

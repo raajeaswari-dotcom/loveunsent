@@ -116,19 +116,20 @@ export default function Header() {
                             </div>
                         )}
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="relative text-deep-brown hover:text-burgundy h-8 w-8"
-                            onClick={() => setIsCartOpen(true)}
-                        >
-                            <ShoppingCart className="h-4 w-4" />
-                            {itemCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-burgundy text-white text-[8px] flex items-center justify-center">
-                                    {itemCount}
-                                </span>
-                            )}
-                        </Button>
+                        <Link href="/checkout">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="relative text-deep-brown hover:text-burgundy h-8 w-8"
+                            >
+                                <ShoppingCart className="h-4 w-4" />
+                                {itemCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-burgundy text-white text-[8px] flex items-center justify-center">
+                                        {itemCount}
+                                    </span>
+                                )}
+                            </Button>
+                        </Link>
 
                         <Button
                             variant="ghost"

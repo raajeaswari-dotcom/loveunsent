@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { MessageEditor } from "@/components/MessageEditor";
 import { PaperSelector } from "@/components/PaperSelector";
 import { AddonGrid } from "@/components/AddonGrid";
+import { AddressSelector } from "@/components/AddressSelector";
 
 interface SingleLetterFormProps {
     state: any;
@@ -13,10 +14,8 @@ interface SingleLetterFormProps {
     addons: any[];
     inkColor: string;
     setInkColor: (color: string) => void;
-    recipientName: string;
-    setRecipientName: (name: string) => void;
-    recipientAddress: string;
-    setRecipientAddress: (address: string) => void;
+    selectedAddressId: string | null;
+    onSelectAddress: (addressId: string | null) => void;
     onNext?: () => void;
     onPrev?: () => void;
     isFirst?: boolean;
@@ -30,15 +29,35 @@ export function SingleLetterForm({
     addons,
     inkColor,
     setInkColor,
-    recipientName,
-    setRecipientName,
-    recipientAddress,
-    setRecipientAddress,
+    selectedAddressId,
+    onSelectAddress,
     onNext,
     onPrev,
     isFirst,
     isLast,
 }: SingleLetterFormProps) {
+    const [userAddresses, setUserAddresses] = useState<any[]>([]);
+    const [loadingAddresses, setLoadingAddresses] = useState(true);
+
+    // Fetch user addresses
+    useEffect(() => {
+        fetchAddresses();
+    }, []);
+
+    const fetchAddresses = async () => {
+        try {
+            const response = await fetch('/api/user/addresses');
+            if (response.ok) {
+                const result = await response.json();
+                setUserAddresses(result.data?.addresses || []);
+            }
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
+        } finally {
+            setLoadingAddresses(false);
+        }
+    };
+
     const toggleAddon = (id: string) => {
         if (id === "none") {
             updateState({ addonIds: [] });
@@ -135,33 +154,18 @@ export function SingleLetterForm({
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                     5. Recipient Details
                 </h2>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Name
-                        </label>
-                        <input
-                            type="text"
-                            value={recipientName}
-                            onChange={(e) => setRecipientName(e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[rgb(81,19,23)] focus:ring-[rgb(81,19,23)] p-2 border"
-                            placeholder="Recipient's Name"
-                        />
+                {loadingAddresses ? (
+                    <div className="text-center py-8">
+                        <p className="text-gray-600">Loading addresses...</p>
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Address
-                        </label>
-                        <textarea
-                            rows={3}
-                            value={recipientAddress}
-                            onChange={(e) => setRecipientAddress(e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[rgb(81,19,23)] focus:ring-[rgb(81,19,23)] p-2 border"
-                            placeholder="Full Address"
-                        />
-                    </div>
-                </div>
+                ) : (
+                    <AddressSelector
+                        selectedAddressId={selectedAddressId}
+                        onSelectAddress={onSelectAddress}
+                        userAddresses={userAddresses}
+                        onAddressesChange={fetchAddresses}
+                    />
+                )}
             </section>
 
             {/* Navigation Buttons */}

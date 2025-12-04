@@ -5,9 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Plus, Trash2, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, MapPin, CheckCircle2, AlertCircle, Package } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { isValidPinCode, fetchPinCodeData, formatPinCode, debounce } from '@/lib/pinCodeValidator';
+
+interface Address {
+    _id?: string;
+    recipientName: string;
+    recipientPhone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+    isDefault?: boolean;
+}
 
 export default function ProfileForm() {
     const { user, refreshUser } = useAuth();
@@ -15,13 +29,19 @@ export default function ProfileForm() {
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const [name, setName] = useState('');
-    const [addresses, setAddresses] = useState<any[]>([]);
+    const [addresses, setAddresses] = useState<Address[]>([]);
     const [isAddingAddress, setIsAddingAddress] = useState(false);
-    const [newAddress, setNewAddress] = useState({
-        street: '',
+    const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+
+    const [newAddress, setNewAddress] = useState<Address>({
+        recipientName: '',
+        recipientPhone: '',
+        addressLine1: '',
+        addressLine2: '',
+        landmark: '',
         city: '',
         state: '',
-        zip: '',
+        pincode: '',
         country: 'India',
         isDefault: false
     });
@@ -92,7 +112,7 @@ export default function ProfileForm() {
 
     const handlePinCodeChange = (value: string) => {
         const formatted = formatPinCode(value);
-        setNewAddress({ ...newAddress, zip: formatted });
+        setNewAddress({ ...newAddress, pincode: formatted });
 
         if (formatted.length === 6) {
             debouncedValidatePinCode(formatted);
@@ -115,13 +135,12 @@ export default function ProfileForm() {
             });
 
             const result = await response.json();
-            const data = result.data || result;
 
             if (response.ok) {
                 setMessage({ type: 'success', text: 'Profile updated successfully' });
                 refreshUser();
             } else {
-                setMessage({ type: 'error', text: data.message || result.message || 'Failed to update profile' });
+                setMessage({ type: 'error', text: result.message || 'Failed to update profile' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -136,24 +155,26 @@ export default function ProfileForm() {
         setMessage(null);
 
         try {
-            const updatedAddresses = [...addresses, newAddress];
-            const response = await fetch('/api/user/profile', {
-                method: 'PUT',
+            const response = await fetch('/api/user/addresses', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ addresses: updatedAddresses }),
+                body: JSON.stringify(newAddress),
             });
 
             const result = await response.json();
-            const data = result.data || result;
 
             if (response.ok) {
-                setAddresses(data.user?.addresses || updatedAddresses);
+                setAddresses(result.data?.addresses || []);
                 setIsAddingAddress(false);
                 setNewAddress({
-                    street: '',
+                    recipientName: '',
+                    recipientPhone: '',
+                    addressLine1: '',
+                    addressLine2: '',
+                    landmark: '',
                     city: '',
                     state: '',
-                    zip: '',
+                    pincode: '',
                     country: 'India',
                     isDefault: false
                 });
@@ -162,7 +183,7 @@ export default function ProfileForm() {
                 setMessage({ type: 'success', text: 'Address added successfully' });
                 setTimeout(() => fetchProfile(), 500);
             } else {
-                setMessage({ type: 'error', text: data.message || result.message || 'Failed to add address' });
+                setMessage({ type: 'error', text: result.message || 'Failed to add address' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -176,22 +197,18 @@ export default function ProfileForm() {
 
         setLoading(true);
         try {
-            const updatedAddresses = addresses.filter(addr => addr._id !== addressId);
-            const response = await fetch('/api/user/profile', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ addresses: updatedAddresses }),
+            const response = await fetch(`/api/user/addresses?addressId=${addressId}`, {
+                method: 'DELETE',
             });
 
             const result = await response.json();
-            const data = result.data || result;
 
             if (response.ok) {
-                setAddresses(data.user?.addresses || updatedAddresses);
+                setAddresses(result.data?.addresses || []);
                 setMessage({ type: 'success', text: 'Address deleted successfully' });
                 setTimeout(() => fetchProfile(), 500);
             } else {
-                setMessage({ type: 'error', text: data.message || result.message || 'Failed to delete address' });
+                setMessage({ type: 'error', text: result.message || 'Failed to delete address' });
             }
         } catch (error) {
             setMessage({ type: 'error', text: 'Network error' });
@@ -200,90 +217,112 @@ export default function ProfileForm() {
         }
     };
 
+    const handleEditAddress = (address: Address) => {
+        setEditingAddressId(address._id || null);
+        setNewAddress({
+            recipientName: address.recipientName,
+            recipientPhone: address.recipientPhone,
+            addressLine1: address.addressLine1,
+            addressLine2: address.addressLine2 || '',
+            landmark: address.landmark || '',
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode,
+            country: address.country,
+            isDefault: address.isDefault || false
+        });
+        setIsAddingAddress(true);
+        setPinCodeStatus('valid');
+        setPinCodeMessage(`${address.city}, ${address.state}`);
+    };
+
+    const handleUpdateAddress = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage(null);
+
+        try {
+            const response = await fetch('/api/user/addresses', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    addressId: editingAddressId,
+                    ...newAddress
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setAddresses(result.data?.addresses || []);
+                resetAddressForm();
+                setMessage({ type: 'success', text: 'Address updated successfully' });
+                setTimeout(() => fetchProfile(), 500);
+            } else {
+                setMessage({ type: 'error', text: result.message || 'Failed to update address' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Network error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetAddressForm = () => {
+        setIsAddingAddress(false);
+        setEditingAddressId(null);
+        setNewAddress({
+            recipientName: '',
+            recipientPhone: '',
+            addressLine1: '',
+            addressLine2: '',
+            landmark: '',
+            city: '',
+            state: '',
+            pincode: '',
+            country: 'India',
+            isDefault: false
+        });
+        setPinCodeStatus('idle');
+        setPinCodeMessage('');
+    };
+
     return (
-        <div className="space-y-8 max-w-2xl">
-            {/* Personal Details */}
+        <div className="space-y-6">
+            {/* Personal Information */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Personal Details</CardTitle>
+                    <CardTitle>Personal Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleUpdateProfile} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Your Name"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Email Address</Label>
-                            <div className="flex gap-2 items-center">
-                                <Input value={user?.email || 'Not added'} disabled className="bg-muted flex-1" />
-                                {user?.email ? (
-                                    user.emailVerified ? (
-                                        <div className="flex items-center gap-1 text-green-600 text-sm whitespace-nowrap">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            Verified
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => window.location.href = '/verify?type=email'}
-                                            className="whitespace-nowrap"
-                                        >
-                                            Verify Email
-                                        </Button>
-                                    )
-                                ) : (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.location.href = '/verify?type=email&action=add'}
-                                        className="whitespace-nowrap"
-                                    >
-                                        + Add Email
-                                    </Button>
-                                )}
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input
+                                    id="name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Your name"
+                                />
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Mobile Number</Label>
-                            <div className="flex gap-2 items-center">
-                                <Input value={user?.phone || 'Not added'} disabled className="bg-muted flex-1" />
-                                {user?.phone ? (
-                                    user.phoneVerified ? (
-                                        <div className="flex items-center gap-1 text-green-600 text-sm whitespace-nowrap">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            Verified
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => window.location.href = '/verify?type=mobile'}
-                                            className="whitespace-nowrap"
-                                        >
-                                            Verify Mobile
-                                        </Button>
-                                    )
-                                ) : (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.location.href = '/verify?type=mobile&action=add'}
-                                        className="whitespace-nowrap"
-                                    >
-                                        + Add Mobile
-                                    </Button>
-                                )}
+
+                            <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input
+                                    value={user?.email || 'Not provided'}
+                                    disabled
+                                    className="bg-gray-100"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Phone</Label>
+                                <Input
+                                    value={user?.phone || 'Not provided'}
+                                    disabled
+                                    className="bg-gray-100"
+                                />
                             </div>
                         </div>
 
@@ -295,27 +334,61 @@ export default function ProfileForm() {
                 </CardContent>
             </Card>
 
-            {/* Addresses */}
+            {/* Delivery Addresses */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>My Addresses</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-[rgb(81,19,23)]" />
+                        <CardTitle>Delivery Addresses</CardTitle>
+                    </div>
                     <Button variant="outline" size="sm" onClick={() => setIsAddingAddress(!isAddingAddress)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add New
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <p className="text-sm text-gray-600">
+                        Save recipient addresses here. You can select them when customizing letters.
+                    </p>
+
                     {isAddingAddress && (
-                        <form onSubmit={handleAddAddress} className="p-4 border rounded-lg bg-muted/20 space-y-4">
-                            <h4 className="font-medium">New Address</h4>
+                        <form onSubmit={editingAddressId ? handleUpdateAddress : handleAddAddress} className="p-4 border-2 rounded-lg bg-muted/20 space-y-4">
+                            <h4 className="font-medium">{editingAddressId ? 'Edit Address' : 'New Address'}</h4>
                             <div className="grid gap-4">
-                                {/* PIN Code - First field (Amazon style) */}
+                                {/* Recipient Name and Phone */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="recipientName">Recipient Name *</Label>
+                                        <Input
+                                            id="recipientName"
+                                            value={newAddress.recipientName}
+                                            onChange={(e) => setNewAddress({ ...newAddress, recipientName: e.target.value })}
+                                            placeholder="Full name"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="recipientPhone">Recipient Phone *</Label>
+                                        <Input
+                                            id="recipientPhone"
+                                            type="tel"
+                                            value={newAddress.recipientPhone}
+                                            onChange={(e) => setNewAddress({ ...newAddress, recipientPhone: e.target.value })}
+                                            placeholder="10-digit mobile number"
+                                            maxLength={10}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* PIN Code - First for auto-fill */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="zip">PIN Code</Label>
+                                    <Label htmlFor="pincode">PIN Code *</Label>
                                     <div className="relative">
                                         <Input
-                                            id="zip"
-                                            value={newAddress.zip}
+                                            id="pincode"
+                                            value={newAddress.pincode}
                                             onChange={(e) => handlePinCodeChange(e.target.value)}
                                             placeholder="Enter 6-digit PIN code"
                                             maxLength={6}
@@ -337,34 +410,54 @@ export default function ProfileForm() {
                                         </div>
                                     </div>
                                     {pinCodeMessage && (
-                                        <p className={`text-xs flex items-center gap-1 ${pinCodeStatus === 'valid' ? 'text-green-600' :
+                                        <p className={`text-xs ${pinCodeStatus === 'valid' ? 'text-green-600' :
                                             pinCodeStatus === 'invalid' ? 'text-red-600' :
                                                 'text-blue-600'
                                             }`}>
                                             {pinCodeMessage}
                                         </p>
                                     )}
-                                    <p className="text-xs text-muted-foreground">
-                                        City and State will be auto-filled based on PIN code
-                                    </p>
+                                    <p className="text-xs text-gray-500">City and State will be auto-filled</p>
                                 </div>
 
-                                {/* Street Address */}
+                                {/* Address Line 1 */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="street">Flat, House no., Building, Company, Apartment</Label>
+                                    <Label htmlFor="addressLine1">Flat, House no., Building, Company, Apartment *</Label>
                                     <Input
-                                        id="street"
-                                        value={newAddress.street}
-                                        onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
-                                        placeholder="Enter your street address"
+                                        id="addressLine1"
+                                        value={newAddress.addressLine1}
+                                        onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
+                                        placeholder="Enter address line 1"
                                         required
+                                    />
+                                </div>
+
+                                {/* Address Line 2 */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="addressLine2">Area, Street, Sector, Village (Optional)</Label>
+                                    <Input
+                                        id="addressLine2"
+                                        value={newAddress.addressLine2}
+                                        onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
+                                        placeholder="Enter address line 2"
+                                    />
+                                </div>
+
+                                {/* Landmark */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="landmark">Landmark (Optional)</Label>
+                                    <Input
+                                        id="landmark"
+                                        value={newAddress.landmark}
+                                        onChange={(e) => setNewAddress({ ...newAddress, landmark: e.target.value })}
+                                        placeholder="E.g., Near City Mall"
                                     />
                                 </div>
 
                                 {/* City and State - Auto-filled */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="city">City</Label>
+                                        <Label htmlFor="city">City *</Label>
                                         <Input
                                             id="city"
                                             value={newAddress.city}
@@ -378,7 +471,7 @@ export default function ProfileForm() {
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="state">State</Label>
+                                        <Label htmlFor="state">State *</Label>
                                         <Input
                                             id="state"
                                             value={newAddress.state}
@@ -400,48 +493,73 @@ export default function ProfileForm() {
                                         id="country"
                                         value={newAddress.country}
                                         disabled
-                                        className="bg-muted"
+                                        className="bg-gray-100"
                                     />
                                 </div>
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                                <Button type="button" variant="ghost" onClick={() => {
-                                    setIsAddingAddress(false);
-                                    setPinCodeStatus('idle');
-                                    setPinCodeMessage('');
-                                }}>Cancel</Button>
-                                <Button
-                                    type="submit"
-                                    disabled={loading || pinCodeStatus === 'validating' || pinCodeStatus === 'invalid'}
-                                >
-                                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                    Save Address
-                                </Button>
+
+                                <div className="flex gap-2 justify-end pt-4">
+                                    <Button type="button" variant="ghost" onClick={resetAddressForm}>
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={loading || pinCodeStatus === 'validating' || pinCodeStatus === 'invalid'}
+                                        className="bg-[rgb(81,19,23)] hover:bg-[#4A2424]"
+                                    >
+                                        {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        {editingAddressId ? 'Update Address' : 'Save Address'}
+                                    </Button>
+                                </div>
                             </div>
                         </form>
                     )}
 
                     <div className="grid gap-4">
-                        {addresses.map((addr: any, index) => (
-                            <div key={index} className="flex items-start justify-between p-4 border rounded-lg">
-                                <div className="flex gap-3">
-                                    <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
-                                    <div>
-                                        <p className="font-medium">{addr.street}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {addr.city}, {addr.state} {addr.zip}
+                        {addresses.map((addr: Address) => (
+                            <div key={addr._id} className="flex items-start justify-between p-4 border rounded-lg hover:border-gray-300 transition-colors">
+                                <div className="flex gap-3 flex-1">
+                                    <MapPin className="w-5 h-5 text-muted-foreground mt-1 flex-shrink-0" />
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-gray-900">{addr.recipientName}</p>
+                                        <p className="text-sm text-gray-600">{addr.recipientPhone}</p>
+                                        <p className="text-sm text-gray-700 mt-1">
+                                            {addr.addressLine1}
+                                            {addr.addressLine2 && `, ${addr.addressLine2}`}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">{addr.country}</p>
+                                        {addr.landmark && (
+                                            <p className="text-sm text-gray-600">Landmark: {addr.landmark}</p>
+                                        )}
+                                        <p className="text-sm text-gray-700">
+                                            {addr.city}, {addr.state} - {addr.pincode}
+                                        </p>
+                                        <p className="text-sm text-gray-600">{addr.country}</p>
+                                        {addr.isDefault && (
+                                            <span className="inline-block mt-2 px-2 py-1 text-xs bg-[rgb(81,19,23)] text-white rounded">
+                                                Default
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                    onClick={() => handleDeleteAddress(addr._id)}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={() => handleEditAddress(addr)}
+                                        title="Edit Address"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                        onClick={() => handleDeleteAddress(addr._id!)}
+                                        title="Delete Address"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
                         ))}
                         {addresses.length === 0 && !isAddingAddress && (

@@ -17,8 +17,7 @@ const initialLetterState = {
     addonIds: [],
     handwritingStyle: "Standard",
     inkColor: "Blue",
-    recipientName: "",
-    recipientAddress: "",
+    recipientAddressId: null,
 };
 
 function CustomizeBundleContent() {
@@ -90,8 +89,7 @@ function CustomizeBundleContent() {
         return (
             letter.message?.trim() &&
             letter.paperId &&
-            letter.recipientName?.trim() &&
-            letter.recipientAddress?.trim()
+            letter.recipientAddressId
         );
     };
 
@@ -153,8 +151,7 @@ function CustomizeBundleContent() {
                     paperId: letter.paperId,
                     addonIds: letter.addonIds,
                     inkColor: letter.inkColor,
-                    recipientName: letter.recipientName,
-                    recipientAddress: letter.recipientAddress,
+                    recipientAddressId: letter.recipientAddressId,
                     occasion: "Bundle",
                 },
             });
@@ -319,7 +316,7 @@ function CustomizeBundleContent() {
                                                 </div>
                                                 <p className="text-sm text-gray-600">
                                                     <span className="font-semibold">Recipient:</span>{" "}
-                                                    {letter.recipientName}
+                                                    {letter.recipientAddressId ? 'Address Selected' : 'Not Selected'}
                                                 </p>
                                                 <p className="text-sm text-gray-600">
                                                     <span className="font-semibold">Paper:</span>{" "}
@@ -381,15 +378,9 @@ function CustomizeBundleContent() {
                                         setInkColor={(color) =>
                                             updateLetterState(activeTab, { inkColor: color })
                                         }
-                                        recipientName={activeLetter.recipientName}
-                                        setRecipientName={(name) =>
-                                            updateLetterState(activeTab, { recipientName: name })
-                                        }
-                                        recipientAddress={activeLetter.recipientAddress}
-                                        setRecipientAddress={(address) =>
-                                            updateLetterState(activeTab, {
-                                                recipientAddress: address,
-                                            })
+                                        selectedAddressId={activeLetter.recipientAddressId}
+                                        onSelectAddress={(addressId) =>
+                                            updateLetterState(activeTab, { recipientAddressId: addressId })
                                         }
                                         onNext={handleNext}
                                         onPrev={handlePrev}

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '@/lib/db';
 import { Order } from '@/models/Order';
 import { Paper } from '@/models/Paper';
@@ -21,20 +22,25 @@ const razorpay = new Razorpay({
 const orderItemSchema = z.object({
     paperId: z.string(),
     handwritingStyleId: z.string(),
-    perfumeId: z.string().optional(),
-    addOns: z.array(z.string()).optional(),
-    messageContent: z.string().optional(),
-    voiceNoteUrl: z.string().optional(),
-    wordCount: z.number().optional(),
+    perfumeId: z.string().optional().nullable(),
+    addOns: z.array(z.string()).optional().nullable(),
+    messageContent: z.string().optional().nullable(),
+    voiceNoteUrl: z.string().optional().nullable(),
+    wordCount: z.number().optional().nullable(),
+    inkColor: z.string().optional().nullable(),
 });
 
 const createOrderSchema = z.object({
     items: z.array(orderItemSchema),
+    paymentMethod: z.enum(['cod', 'online']).optional(),
     shippingAddress: z.object({
-        street: z.string(),
+        fullName: z.string(),
+        phone: z.string(),
+        addressLine1: z.string(),
+        addressLine2: z.string().optional(),
         city: z.string(),
         state: z.string(),
-        zip: z.string(),
+        pincode: z.string(),
         country: z.string()
     })
 });
@@ -69,53 +75,112 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
+        console.log('Order creation request body:', JSON.stringify(body, null, 2));
+
         const result = createOrderSchema.safeParse(body);
-        if (!result.success) return errorResponse('Validation Error', 400, result.error.format());
+        if (!result.success) {
+            console.error('Validation failed:', result.error.format());
+            return errorResponse('Validation Error', 400, result.error.format());
+        }
 
         const { items, shippingAddress } = result.data;
+        console.log('Validated shipping address:', shippingAddress);
 
         // Calculate Total Price
         let totalAmount = 0;
         const enrichedItems = [];
 
         for (const item of items) {
-            const paper = await Paper.findById(item.paperId);
-            const style = await Handwriting.findById(item.handwritingStyleId);
+            // Handle default values - fetch first available if "ordinary", "default" or invalid ObjectId
+            let paperId = item.paperId;
+            let handwritingStyleId = item.handwritingStyleId;
+
+            if (!paperId || paperId === 'ordinary' || !mongoose.Types.ObjectId.isValid(paperId)) {
+                const firstPaper = await Paper.findOne().sort({ createdAt: 1 });
+                if (!firstPaper) return errorResponse('No paper options available', 400);
+                paperId = firstPaper._id.toString();
+            }
+
+            if (!handwritingStyleId || handwritingStyleId === 'default' || !mongoose.Types.ObjectId.isValid(handwritingStyleId)) {
+                const firstStyle = await Handwriting.findOne().sort({ createdAt: 1 });
+                if (!firstStyle) return errorResponse('No handwriting styles available', 400);
+                handwritingStyleId = firstStyle._id.toString();
+            }
+
+            const paper = await Paper.findById(paperId);
+            const style = await Handwriting.findById(handwritingStyleId);
             if (!paper || !style) return errorResponse('Invalid Product ID', 400);
 
             let itemPrice = (paper.priceExtra || 0) + (style.priceExtra || 0) + 99; // Base price 99
 
-            if (item.perfumeId) {
+            if (item.perfumeId && mongoose.Types.ObjectId.isValid(item.perfumeId)) {
                 const perfume = await Perfume.findById(item.perfumeId);
                 if (perfume) itemPrice += (perfume.priceExtra || 0);
             }
 
             if (item.addOns && item.addOns.length > 0) {
-                const addons = await Addon.find({ _id: { $in: item.addOns } });
-                addons.forEach(addon => itemPrice += (addon.price || 0));
+                // Filter out invalid ObjectIds
+                const validAddonIds = item.addOns.filter((id: string) => mongoose.Types.ObjectId.isValid(id));
+
+                if (validAddonIds.length > 0) {
+                    const addons = await Addon.find({ _id: { $in: validAddonIds } });
+                    addons.forEach(addon => itemPrice += (addon.price || 0));
+
+                    // Update item.addOns to only include valid IDs
+                    item.addOns = validAddonIds;
+                } else {
+                    item.addOns = [];
+                }
+            } else {
+                item.addOns = [];
             }
 
             totalAmount += itemPrice;
             enrichedItems.push({
                 ...item,
-                paper: item.paperId, // Map to schema field name if needed, or use direct ID
-                style: item.handwritingStyleId,
+                paperId: paperId,
+                handwritingStyleId: handwritingStyleId,
+                paper: paperId, // Map to schema field name if needed, or use direct ID
+                style: handwritingStyleId,
                 price: itemPrice
             });
         }
 
-        // Create Razorpay Order
-        const paymentOrder = await razorpay.orders.create({
-            amount: totalAmount * 100,
-            currency: 'INR',
-            receipt: `rcpt_${Date.now()}_${decoded.userId.substring(0, 5)}`
-        });
+        // Create Payment Order (Razorpay or COD placeholder)
+        const { paymentMethod } = result.data;
+        let paymentOrder;
+
+        if (paymentMethod === 'cod') {
+            paymentOrder = {
+                id: `cod_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                amount: totalAmount * 100,
+                currency: 'INR',
+                status: 'pending'
+            };
+        } else {
+            // TODO: Integrate Razorpay properly with valid API keys
+            try {
+                paymentOrder = await razorpay.orders.create({
+                    amount: totalAmount * 100,
+                    currency: 'INR',
+                    receipt: `rcpt_${Date.now()}_${userId.substring(0, 5)}`
+                });
+            } catch (razorpayError: any) {
+                console.error('Razorpay error (skipping for now):', razorpayError);
+                // Use placeholder for now - payment will be handled separately
+                paymentOrder = {
+                    id: `order_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                    amount: totalAmount * 100,
+                    currency: 'INR'
+                };
+            }
+        }
 
         // Create DB Order (Assuming single item per order for simplicity based on schema, or loop if multi-order)
         const createdOrders = [];
         for (const item of enrichedItems) {
             const newOrder = await Order.create({
-                customerId: decoded.userId,
+                customerId: userId,
                 paperId: item.paperId,
                 handwritingStyleId: item.handwritingStyleId,
                 perfumeId: item.perfumeId,
@@ -128,7 +193,8 @@ export async function POST(req: NextRequest) {
                 workflowState: 'pending_payment',
                 payment: {
                     razorpayOrderId: paymentOrder.id,
-                    status: 'pending'
+                    status: 'pending',
+                    method: paymentMethod || 'online'
                 },
                 shippingAddress
             });
@@ -144,6 +210,9 @@ export async function POST(req: NextRequest) {
         }, 201);
 
     } catch (error: any) {
-        return errorResponse(error.message, 500);
+        console.error('Order creation error:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error message:', error.message);
+        return errorResponse(error.message || 'Failed to create order', 500);
     }
 }

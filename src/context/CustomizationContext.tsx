@@ -11,6 +11,7 @@ type CustomizationState = {
     deliveryDate: string | null;
     inputMethod: 'text' | 'voice' | 'image';
     handwritingImageUrl: string | null;
+    recipientAddressId: string | null; // ID of saved address from user's addresses
 };
 
 type CustomizationContextType = {
@@ -29,6 +30,7 @@ const initialState: CustomizationState = {
     deliveryDate: null,
     inputMethod: 'text',
     handwritingImageUrl: null,
+    recipientAddressId: null,
 };
 
 const CustomizationContext = createContext<CustomizationContextType | undefined>(undefined);
