@@ -116,12 +116,16 @@ export default function AuthPage() {
     /* -----------------------------------------
        VERIFY OTP (DEBUG VERSION)
     ------------------------------------------ */
-    const handleVerifyOTP = async (e?: React.FormEvent) => {
+    /* -----------------------------------------
+       VERIFY OTP (DEBUG VERSION)
+    ------------------------------------------ */
+    const handleVerifyOTP = async (e?: React.FormEvent, otpValues?: string[]) => {
         e?.preventDefault();
         setError("");
         setLoading(true);
 
-        const otpCode = otp.join("");
+        const currentOtp = otpValues || otp;
+        const otpCode = currentOtp.join("");
 
         // 🔍 DEBUG: What client is sending
         console.log("🔐 [Client] Verifying OTP", {
@@ -145,15 +149,15 @@ export default function AuthPage() {
         const body =
             method === "email"
                 ? {
-                      email: email.toLowerCase().trim(),
-                      code: otpCode,
-                      name: isNewUser ? name : undefined,
-                  }
+                    email: email.toLowerCase().trim(),
+                    code: otpCode,
+                    name: isNewUser ? name : undefined,
+                }
                 : {
-                      phone,
-                      code: otpCode,
-                      name: isNewUser ? name : undefined,
-                  };
+                    phone,
+                    code: otpCode,
+                    name: isNewUser ? name : undefined,
+                };
 
         // DEBUG: Log outgoing request
         console.log("🔐 [Client] POST →", endpoint, body);
@@ -179,8 +183,9 @@ export default function AuthPage() {
 
             if (!res.ok) {
                 setError(data.message || "Invalid OTP");
-                setOtp(["", "", "", "", "", ""]);
-                otpRefs.current[0]?.focus();
+                // Don't clear OTP on error immediately, let user correct it
+                // setOtp(["", "", "", "", "", ""]); 
+                otpRefs.current[5]?.focus(); // Focus last or first? Maybe keep focus.
             } else {
                 login(data.user);
                 setSuccess("Login successful!");
@@ -206,7 +211,8 @@ export default function AuthPage() {
         if (digit && i < 5) otpRefs.current[i + 1]?.focus();
 
         if (i === 5 && digit && newOtp.every((d) => d)) {
-            setTimeout(() => handleVerifyOTP(), 100);
+            // Pass the new OTP values directly to avoid stale state in closure
+            handleVerifyOTP(undefined, newOtp);
         }
     };
 
