@@ -120,12 +120,15 @@ function VerifyContent() {
         }
     };
 
-    const handleVerifyOTP = async (e?: React.FormEvent) => {
+    const handleVerifyOTP = async (e?: React.FormEvent, otpValues?: string[]) => {
         e?.preventDefault();
         setError('');
         setLoading(true);
 
-        const otpCode = otp.join('');
+        // Use passed values or current state
+        const currentOtp = otpValues || otp;
+        const otpCode = currentOtp.join('');
+
         const endpoint = type === 'email'
             ? '/api/auth/email/verify-otp'
             : '/api/auth/mobile/verify-otp';
@@ -175,8 +178,9 @@ function VerifyContent() {
             (otpRefs[index + 1] as any)?.focus();
         }
 
+        // Auto-submit when all 6 digits entered - pass newOtp directly to avoid stale state
         if (index === 5 && digit && newOtp.every(d => d)) {
-            setTimeout(() => handleVerifyOTP(), 100);
+            handleVerifyOTP(undefined, newOtp);
         }
     };
 
