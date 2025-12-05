@@ -10,8 +10,16 @@ import { sendOTP, verifyOTP } from '@/lib/otpService';
  */
 export async function POST(req: NextRequest) {
     try {
-        const user = await verifyToken(req);
-        if (!user) {
+        const token = req.cookies.get('token')?.value;
+        if (!token) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const decoded: any = verifyToken(token);
+        if (!decoded) {
             return NextResponse.json(
                 { success: false, message: 'Unauthorized' },
                 { status: 401 }
@@ -57,7 +65,7 @@ export async function POST(req: NextRequest) {
 
         // Check if email/phone already exists for another user
         const existingUser = await User.findOne({
-            _id: { $ne: user.userId },
+            _id: { $ne: decoded.userId },
             [type === 'email' ? 'email' : 'phone']: value
         });
 
@@ -99,8 +107,16 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
     try {
-        const user = await verifyToken(req);
-        if (!user) {
+        const token = req.cookies.get('token')?.value;
+        if (!token) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const decoded: any = verifyToken(token);
+        if (!decoded) {
             return NextResponse.json(
                 { success: false, message: 'Unauthorized' },
                 { status: 401 }
@@ -139,7 +155,7 @@ export async function PUT(req: NextRequest) {
         }
 
         const updatedUser = await User.findByIdAndUpdate(
-            user.userId,
+            decoded.userId,
             { $set: updateData },
             { new: true, runValidators: true }
         ).select('-passwordHash');
