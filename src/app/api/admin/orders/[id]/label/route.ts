@@ -61,7 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             });
         });
 
-        return new NextResponse(pdfBuffer, {
+        return new NextResponse(new Uint8Array(pdfBuffer), {
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `inline; filename="label-${order._id}.pdf"`,
