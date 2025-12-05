@@ -94,7 +94,7 @@ export async function GET(
             // Total
             doc.moveDown();
             const totalY = doc.y;
-            doc.fontSize(12).text(`Total Amount: ${order.currency} ${order.price}`, 350, totalY, { align: 'right', bold: true });
+            doc.fontSize(12).font('Helvetica-Bold').text(`Total Amount: ${order.currency} ${order.price}`, 350, totalY, { align: 'right' });
 
             // Payment Status
             doc.fontSize(10).text(`Payment Status: ${(order.payment?.status || 'Pending').toUpperCase()}`, 50, totalY + 20);
