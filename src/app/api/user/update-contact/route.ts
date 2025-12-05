@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import dbConnect from '@/lib/dbConnect';
+import connectDB from '@/lib/db';
 import { User } from '@/models/User';
 import { sendOTP, verifyOTP } from '@/lib/otpService';
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        await dbConnect();
+        await connectDB();
 
         // Validate format
         if (type === 'email') {
@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest) {
             );
         }
 
-        await dbConnect();
+        await connectDB();
 
         // Verify OTP
         const isValid = await verifyOTP(value, otp, type);
