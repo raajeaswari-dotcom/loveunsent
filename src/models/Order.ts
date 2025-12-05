@@ -6,12 +6,19 @@ const OrderSchema = new Schema({
         ref: 'User',
         required: [true, 'Customer ID is required']
     },
+    orderId: {
+        type: String,
+        unique: true,
+        required: true,
+        default: () => `ORD-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`
+    },
 
     // Product Details
     paperId: { type: Schema.Types.ObjectId, ref: 'Paper', required: true },
     perfumeId: { type: Schema.Types.ObjectId, ref: 'Perfume' },
     handwritingStyleId: { type: Schema.Types.ObjectId, ref: 'Handwriting', required: true },
-    addOns: [{ type: Schema.Types.ObjectId, ref: 'Addon' }],
+    addOns: [{ type: String }], // Keeping as String for now as Addon usage was mixed
+    inkColor: { type: String },
 
     // Content
     inputMethod: {
@@ -48,6 +55,8 @@ const OrderSchema = new Schema({
         type: String,
         enum: [
             'pending_payment',
+            'payment_pending', // Added for compatibility
+            'payment_completed', // Added for compatibility
             'paid',
             'assigned',
             'writing_in_progress',
@@ -81,10 +90,13 @@ const OrderSchema = new Schema({
     },
 
     shippingAddress: {
-        street: String,
+        fullName: String, // Added fullName
+        phone: String, // Added phone
+        addressLine1: String, // Changed from street to match frontend
+        addressLine2: String,
         city: String,
         state: String,
-        zip: String,
+        pincode: String, // Changed from zip
         country: String
     }
 }, {
@@ -95,5 +107,11 @@ const OrderSchema = new Schema({
 OrderSchema.index({ customerId: 1 });
 OrderSchema.index({ writerId: 1 });
 OrderSchema.index({ workflowState: 1 });
+OrderSchema.index({ orderId: 1 }, { unique: true });
+
+// Clear any existing model to prevent caching issues
+if (models.Order) {
+    delete models.Order;
+}
 
 export const Order = models.Order || model('Order', OrderSchema);

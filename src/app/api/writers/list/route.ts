@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
         if (!token) return errorResponse('Unauthorized', 401);
 
         const decoded: any = verifyToken(token);
-        if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'superadmin')) {
+        if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
             return errorResponse('Forbidden', 403);
         }
 

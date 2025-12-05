@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Menu, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Header() {
     const { items, setIsCartOpen } = useCart();
     const { user, loading, logout } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -61,11 +62,15 @@ export default function Header() {
                         {!loading && (
                             <div className="hidden md:flex items-center gap-1">
                                 {user ? (
-                                    <div className="relative">
+                                    <div
+                                        className="relative group h-full flex items-center"
+                                        onMouseEnter={() => setIsUserMenuOpen(true)}
+                                        onMouseLeave={() => setIsUserMenuOpen(false)}
+                                    >
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                            onClick={() => router.push('/dashboard')}
                                             className="text-deep-brown hover:text-burgundy text-xs h-8 px-3 flex flex-col items-start leading-tight"
                                         >
                                             <span className="text-[10px] font-normal">Hello, {user.name?.split(' ')[0] || 'User'}</span>
@@ -73,7 +78,14 @@ export default function Header() {
                                         </Button>
 
                                         {isUserMenuOpen && (
-                                            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+                                            <div className="absolute top-full right-0 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                                                <Link
+                                                    href="/dashboard"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                    onClick={() => setIsUserMenuOpen(false)}
+                                                >
+                                                    Dashboard
+                                                </Link>
                                                 <Link
                                                     href="/dashboard?tab=orders"
                                                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -116,20 +128,23 @@ export default function Header() {
                             </div>
                         )}
 
-                        <Link href="/checkout">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="relative text-deep-brown hover:text-burgundy h-8 w-8"
-                            >
-                                <ShoppingCart className="h-4 w-4" />
-                                {itemCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-burgundy text-white text-[8px] flex items-center justify-center">
-                                        {itemCount}
-                                    </span>
-                                )}
-                            </Button>
-                        </Link>
+                        {/* Cart - Only show for customers or non-logged-in users */}
+                        {(!user || user.role === 'customer') && (
+                            <Link href="/checkout">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="relative text-deep-brown hover:text-burgundy h-8 w-8"
+                                >
+                                    <ShoppingCart className="h-4 w-4" />
+                                    {itemCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-burgundy text-white text-[8px] flex items-center justify-center">
+                                            {itemCount}
+                                        </span>
+                                    )}
+                                </Button>
+                            </Link>
+                        )}
 
                         <Button
                             variant="ghost"
@@ -166,22 +181,33 @@ export default function Header() {
                                 <>
                                     <div className="px-3 py-2 bg-gray-50 rounded-md">
                                         <p className="text-xs text-gray-600">Hello, {user.name?.split(' ')[0] || 'User'}</p>
-                                        <p className="text-sm font-semibold text-gray-900">Account & Orders</p>
+                                        <p className="text-sm font-semibold text-gray-900">{user.role === 'customer' ? 'Account & Orders' : 'Account'}</p>
                                     </div>
-                                    <Link
-                                        href="/dashboard?tab=orders"
-                                        className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 px-3 py-2"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                        My Orders
-                                    </Link>
-                                    <Link
-                                        href="/dashboard?tab=profile"
-                                        className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 px-3 py-2"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                        Profile & Addresses
-                                    </Link>
+                                    {user.role === 'customer' && (
+                                        <>
+                                            <Link
+                                                href="/dashboard"
+                                                className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 px-3 py-2"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Dashboard
+                                            </Link>
+                                            <Link
+                                                href="/dashboard?tab=orders"
+                                                className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 px-3 py-2"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                My Orders
+                                            </Link>
+                                            <Link
+                                                href="/dashboard?tab=profile"
+                                                className="text-gray-700 hover:text-gray-900 font-medium flex items-center gap-2 px-3 py-2"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Profile & Addresses
+                                            </Link>
+                                        </>
+                                    )}
                                     <button
                                         onClick={() => {
                                             logout();

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import OrderNotes from '@/components/admin/OrderNotes';
 import OrderTimeline from '@/components/admin/OrderTimeline';
+import WorkflowManager from '@/components/admin/WorkflowManager';
 import Link from 'next/link';
 import {
     ArrowLeft,
@@ -87,6 +88,14 @@ export default function SuperAdminOrderDetailsPage({ params }: { params: { id: s
     const handleUpdateTracking = async () => {
         // TODO: Implement tracking update API
         alert('Tracking update feature coming soon');
+    };
+
+    const handleDownloadInvoice = () => {
+        window.open(`/api/admin/orders/${params.id}/invoice`, '_blank');
+    };
+
+    const handleGenerateLabel = () => {
+        window.open(`/api/admin/orders/${params.id}/label`, '_blank');
     };
 
     const formatCurrency = (amount: number) => {
@@ -342,17 +351,24 @@ export default function SuperAdminOrderDetailsPage({ params }: { params: { id: s
                         updatedAt={order.updatedAt}
                     />
 
+                    {/* Workflow Manager */}
+                    <WorkflowManager
+                        orderId={order._id}
+                        currentStatus={order.workflowState}
+                        onUpdate={fetchOrder}
+                    />
+
                     {/* Quick Actions */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Quick Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                            <Button variant="outline" className="w-full">
+                            <Button variant="outline" className="w-full" onClick={handleDownloadInvoice}>
                                 <Download className="h-4 w-4 mr-2" />
                                 Download Invoice
                             </Button>
-                            <Button variant="outline" className="w-full">
+                            <Button variant="outline" className="w-full" onClick={handleGenerateLabel}>
                                 <FileText className="h-4 w-4 mr-2" />
                                 Generate Label
                             </Button>

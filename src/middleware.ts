@@ -20,12 +20,15 @@ const PUBLIC_PATHS = [
   "/login",
   "/register",
   "/admin/login",
+  "/super-admin/login",  // Super admin login
+  "/writer/login",  // Writer login
   "/our-collection",
   "/customize",
   "/about",
   "/contact",
   "/terms",
   "/privacy",
+  "/api/auth/login",  // Login API
   "/api/auth/send-otp",
   "/api/auth/verify-otp",
   "/api/auth/email/send-otp",
@@ -68,6 +71,28 @@ export async function middleware(req: NextRequest) {
   }
 
   // Role-based protection
+
+  // CUSTOMER-ONLY routes (admin roles should NOT access these)
+  const CUSTOMER_ONLY_PATHS = ["/checkout", "/cart", "/dashboard", "/profile"];
+  if (CUSTOMER_ONLY_PATHS.some((p) => path.startsWith(p))) {
+    if (decoded.role !== "customer") {
+      // Admin roles trying to access customer features - redirect to their dashboard
+      if (decoded.role === "super_admin") {
+        url.pathname = "/super-admin/dashboard";
+      } else if (decoded.role === "admin") {
+        url.pathname = "/admin/dashboard";
+      } else if (decoded.role === "writer") {
+        url.pathname = "/writer/orders";
+      } else if (decoded.role === "qc") {
+        url.pathname = "/qc";
+      } else {
+        url.pathname = "/login";
+      }
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // ADMIN-ONLY route protection
   if (path.startsWith("/admin") && decoded.role !== "admin" && decoded.role !== "super_admin") {
     url.pathname = "/login";
     return NextResponse.redirect(url);

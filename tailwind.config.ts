@@ -21,7 +21,7 @@ const config = {
             fontFamily: {
                 'serif': ['var(--font-body)', 'sans-serif'],
                 'sans': ['var(--font-body)', 'sans-serif'],
-                'display': ['var(--font-body)', 'sans-serif'],
+                'display': ['"Nighty Demo"', 'cursive'],
                 'nighty': ['"Nighty Demo"', 'serif'],
                 'gorditas': ['var(--font-gorditas)', 'cursive'],
                 'retro-wild': ['"Retro Wild"', 'serif'],

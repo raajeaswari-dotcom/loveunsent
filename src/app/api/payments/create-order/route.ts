@@ -15,9 +15,14 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const token = req.cookies.get('token')?.value;
     if (!token) return errorResponse('Unauthorized', 401);
-    
+
     const decoded: any = verifyToken(token);
     if (!decoded) return errorResponse('Invalid Token', 401);
+
+    // Only customers can create payment orders
+    if (decoded.role !== 'customer') {
+      return errorResponse('Forbidden: Only customers can make purchases', 403);
+    }
 
     const body = await req.json();
     const result = createPaymentOrderSchema.safeParse(body);
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!order) return errorResponse('Order not found', 404);
 
     // Security check: Ensure user owns the order
-    if (order.customerId.toString() !== decoded.userId && decoded.role !== 'admin') {
+    if (order.customerId.toString() !== decoded.userId) {
       return errorResponse('Forbidden', 403);
     }
 
@@ -40,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // Amount calculation (Double check with DB price to ensure integrity)
     // We use the price already calculated and stored in the order to avoid discrepancies
-    const amount = order.price; 
+    const amount = order.price;
     const currency = order.currency || 'INR';
 
     const options = {

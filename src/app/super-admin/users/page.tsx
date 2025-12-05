@@ -12,6 +12,7 @@ import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { Plus, Edit, Trash2, Loader2, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 
 interface User {
     _id: string;
@@ -380,17 +381,15 @@ export default function UsersManagementPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch
                                 id="isActive"
                                 checked={formData.isActive}
-                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                                 disabled={editingUser?._id === currentUserId}
-                                className="h-4 w-4 rounded border-gray-300"
                             />
-                            <Label htmlFor="isActive" className="text-sm font-normal">
-                                Active
+                            <Label htmlFor="isActive" className="text-sm font-medium">
+                                {formData.isActive ? 'Active Account' : 'Suspended Account'}
                             </Label>
                         </div>
                     </div>

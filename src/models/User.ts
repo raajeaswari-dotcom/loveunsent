@@ -144,6 +144,38 @@ const UserSchema = new Schema(
       default: false,
     },
 
+    // Optional Personal Information
+    dateOfBirth: {
+      type: Date,
+      required: false,
+    },
+
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other', 'prefer_not_to_say', ''],
+      required: false,
+    },
+
+    preferredLanguage: {
+      type: String,
+      enum: ['en', 'hi', 'ta', 'te', 'kn', 'ml', 'bn', 'gu', 'pa', ''],
+      default: 'en',
+      required: false,
+    },
+
+    alternatePhone: {
+      type: String,
+      required: false,
+      trim: true,
+      validate: {
+        validator: function (v: any) {
+          if (!v) return true; // allow empty
+          return /^[6-9]\d{9}$/.test(v);
+        },
+        message: "Alternate phone must be a valid 10-digit Indian mobile number",
+      },
+    },
+
     addresses: [AddressSchema],
 
     isActive: { type: Boolean, default: true },

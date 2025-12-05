@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { BundleLetterForm } from "@/components/BundleLetterForm";
 import { MessageEditor } from "@/components/MessageEditor";
 import { PaperSelector } from "@/components/PaperSelector";
 import { AddonGrid } from "@/components/AddonGrid";
@@ -20,6 +21,10 @@ interface SingleLetterFormProps {
     onPrev?: () => void;
     isFirst?: boolean;
     isLast?: boolean;
+    addonsEnabled?: boolean;
+    isBundle?: boolean;
+    bundleData?: any;
+    onUpdateBundle?: (data: any) => void;
 }
 
 export function SingleLetterForm({
@@ -35,6 +40,10 @@ export function SingleLetterForm({
     onPrev,
     isFirst,
     isLast,
+    addonsEnabled = true,
+    isBundle = false,
+    bundleData,
+    onUpdateBundle
 }: SingleLetterFormProps) {
     const [userAddresses, setUserAddresses] = useState<any[]>([]);
     const [loadingAddresses, setLoadingAddresses] = useState(true);
@@ -65,9 +74,6 @@ export function SingleLetterForm({
         }
 
         const currentAddons = state.addonIds || [];
-        // If currently selecting an addon, ensure "none" is not active (which is implied by having items)
-        // If deselecting the last addon, we effectively go back to "none" (empty list)
-
         const newAddons = currentAddons.includes(id)
             ? currentAddons.filter((a: string) => a !== id)
             : [...currentAddons, id];
@@ -81,20 +87,30 @@ export function SingleLetterForm({
             id: "none",
             name: "No Add-ons",
             price: 0,
-            image: "https://images.unsplash.com/photo-1517842645767-c639042777db?q=80&w=2070&auto=format&fit=crop", // Generic simple image or placeholder
+            image: "https://images.unsplash.com/photo-1517842645767-c639042777db?q=80&w=2070&auto=format&fit=crop",
         },
         ...addons
     ];
 
     return (
         <div className="space-y-8">
-            {/* Message Section */}
+            {/* Message / Bundle Section */}
             <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Message</h2>
-                <MessageEditor
-                    value={state.message}
-                    onChange={(val) => updateState({ message: val })}
-                />
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                    {isBundle ? "1. Your Letters" : "1. Message"}
+                </h2>
+                {isBundle && onUpdateBundle ? (
+                    <BundleLetterForm
+                        initialData={bundleData}
+                        onUpdate={onUpdateBundle}
+                        basePrice={0} // Handled in parent
+                    />
+                ) : (
+                    <MessageEditor
+                        value={state.message}
+                        onChange={(val) => updateState({ message: val })}
+                    />
+                )}
             </section>
 
             {/* Paper Section */}
@@ -140,19 +156,21 @@ export function SingleLetterForm({
             </section>
 
             {/* Add-ons Section */}
-            <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Add-ons</h2>
-                <AddonGrid
-                    addons={displayAddons}
-                    selectedIds={(state.addonIds && state.addonIds.length > 0) ? state.addonIds : ["none"]}
-                    onToggle={toggleAddon}
-                />
-            </section>
+            {addonsEnabled && (
+                <section>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Add-ons</h2>
+                    <AddonGrid
+                        addons={displayAddons}
+                        selectedIds={(state.addonIds && state.addonIds.length > 0) ? state.addonIds : ["none"]}
+                        onToggle={toggleAddon}
+                    />
+                </section>
+            )}
 
             {/* Recipient Details Section */}
             <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    5. Recipient Details
+                    {addonsEnabled ? "5." : "4."} Recipient Details
                 </h2>
                 {loadingAddresses ? (
                     <div className="text-center py-8">

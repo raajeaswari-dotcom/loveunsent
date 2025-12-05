@@ -33,6 +33,20 @@ export default function ProfileForm() {
     const [isAddingAddress, setIsAddingAddress] = useState(false);
     const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
 
+    // Optional personal information
+    const [dateOfBirth, setDateOfBirth] = useState('');
+    const [gender, setGender] = useState('');
+    const [preferredLanguage, setPreferredLanguage] = useState('en');
+    const [alternatePhone, setAlternatePhone] = useState('');
+
+    // Contact update states
+    const [isUpdatingContact, setIsUpdatingContact] = useState(false);
+    const [contactUpdateType, setContactUpdateType] = useState<'email' | 'mobile' | null>(null);
+    const [contactValue, setContactValue] = useState('');
+    const [contactOTP, setContactOTP] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpTimer, setOtpTimer] = useState(0);
+
     const [newAddress, setNewAddress] = useState<Address>({
         recipientName: '',
         recipientPhone: '',
@@ -54,6 +68,14 @@ export default function ProfileForm() {
         fetchProfile();
     }, []);
 
+    // OTP timer countdown
+    useEffect(() => {
+        if (otpTimer > 0) {
+            const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [otpTimer]);
+
     const fetchProfile = async () => {
         try {
             const response = await fetch('/api/user/profile');
@@ -62,6 +84,12 @@ export default function ProfileForm() {
                 const data = result.data || result;
                 setName(data.user?.name || '');
                 setAddresses(data.user?.addresses || []);
+
+                // Load optional personal information
+                setDateOfBirth(data.user?.dateOfBirth ? new Date(data.user.dateOfBirth).toISOString().split('T')[0] : '');
+                setGender(data.user?.gender || '');
+                setPreferredLanguage(data.user?.preferredLanguage || 'en');
+                setAlternatePhone(data.user?.alternatePhone || '');
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -131,7 +159,13 @@ export default function ProfileForm() {
             const response = await fetch('/api/user/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify({
+                    name,
+                    dateOfBirth: dateOfBirth || null,
+                    gender: gender || null,
+                    preferredLanguage,
+                    alternatePhone: alternatePhone || null,
+                }),
             });
 
             const result = await response.json();
@@ -287,6 +321,100 @@ export default function ProfileForm() {
         setPinCodeMessage('');
     };
 
+    // Contact update functions
+    const handleStartContactUpdate = (type: 'email' | 'mobile') => {
+        setContactUpdateType(type);
+        setContactValue('');
+        setContactOTP('');
+        setOtpSent(false);
+        setIsUpdatingContact(true);
+    };
+
+    const handleSendContactOTP = async () => {
+        if (!contactValue.trim()) {
+            setMessage({ type: 'error', text: `Please enter ${contactUpdateType}` });
+            return;
+        }
+
+        setLoading(true);
+        setMessage(null);
+
+        try {
+            const response = await fetch('/api/user/update-contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: contactUpdateType,
+                    value: contactValue
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setOtpSent(true);
+                setOtpTimer(60);
+                setMessage({ type: 'success', text: result.message });
+            } else {
+                setMessage({ type: 'error', text: result.message || 'Failed to send OTP' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Network error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyContactOTP = async () => {
+        if (!contactOTP.trim()) {
+            setMessage({ type: 'error', text: 'Please enter OTP' });
+            return;
+        }
+
+        setLoading(true);
+        setMessage(null);
+
+        try {
+            const response = await fetch('/api/user/update-contact', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: contactUpdateType,
+                    value: contactValue,
+                    otp: contactOTP
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setMessage({ type: 'success', text: result.message });
+                setIsUpdatingContact(false);
+                setContactUpdateType(null);
+                setContactValue('');
+                setContactOTP('');
+                setOtpSent(false);
+                refreshUser();
+                setTimeout(() => fetchProfile(), 500);
+            } else {
+                setMessage({ type: 'error', text: result.message || 'Failed to verify OTP' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Network error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancelContactUpdate = () => {
+        setIsUpdatingContact(false);
+        setContactUpdateType(null);
+        setContactValue('');
+        setContactOTP('');
+        setOtpSent(false);
+        setOtpTimer(0);
+    };
+
     return (
         <div className="space-y-6">
             {/* Personal Information */}
@@ -307,26 +435,310 @@ export default function ProfileForm() {
                                 />
                             </div>
 
+                            {/* Email Section */}
                             <div className="space-y-2">
-                                <Label>Email</Label>
-                                <Input
-                                    value={user?.email || 'Not provided'}
-                                    disabled
-                                    className="bg-gray-100"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <Label>Email</Label>
+                                    {user?.email && user?.emailVerified && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            Verified
+                                        </span>
+                                    )}
+                                </div>
+                                {!isUpdatingContact || contactUpdateType !== 'email' ? (
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={user?.email || 'Not provided'}
+                                            disabled
+                                            className="bg-gray-100 flex-1"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleStartContactUpdate('email')}
+                                        >
+                                            {user?.email ? 'Change' : 'Add'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="newEmail">New Email Address</Label>
+                                            <Input
+                                                id="newEmail"
+                                                type="email"
+                                                value={contactValue}
+                                                onChange={(e) => setContactValue(e.target.value)}
+                                                placeholder="Enter your email"
+                                                disabled={otpSent}
+                                            />
+                                        </div>
+
+                                        {!otpSent ? (
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleSendContactOTP}
+                                                    disabled={loading}
+                                                    className="bg-[rgb(81,19,23)] hover:bg-[#4A2424]"
+                                                >
+                                                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                                    Send OTP
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={handleCancelContactUpdate}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="emailOTP">Enter OTP</Label>
+                                                    <Input
+                                                        id="emailOTP"
+                                                        value={contactOTP}
+                                                        onChange={(e) => setContactOTP(e.target.value)}
+                                                        placeholder="Enter 6-digit OTP"
+                                                        maxLength={6}
+                                                    />
+                                                    {otpTimer > 0 && (
+                                                        <p className="text-xs text-gray-600">
+                                                            Resend OTP in {otpTimer}s
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleVerifyContactOTP}
+                                                        disabled={loading}
+                                                        className="bg-[rgb(81,19,23)] hover:bg-[#4A2424]"
+                                                    >
+                                                        {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                                        Verify & Update
+                                                    </Button>
+                                                    {otpTimer === 0 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={handleSendContactOTP}
+                                                            disabled={loading}
+                                                        >
+                                                            Resend OTP
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={handleCancelContactUpdate}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
+                            {/* Phone Section */}
                             <div className="space-y-2">
-                                <Label>Phone</Label>
-                                <Input
-                                    value={user?.phone || 'Not provided'}
-                                    disabled
-                                    className="bg-gray-100"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <Label>Phone</Label>
+                                    {user?.phone && user?.phoneVerified && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            Verified
+                                        </span>
+                                    )}
+                                </div>
+                                {!isUpdatingContact || contactUpdateType !== 'mobile' ? (
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={user?.phone || 'Not provided'}
+                                            disabled
+                                            className="bg-gray-100 flex-1"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleStartContactUpdate('mobile')}
+                                        >
+                                            {user?.phone ? 'Change' : 'Add'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="newPhone">New Mobile Number</Label>
+                                            <Input
+                                                id="newPhone"
+                                                type="tel"
+                                                value={contactValue}
+                                                onChange={(e) => setContactValue(e.target.value)}
+                                                placeholder="Enter 10-digit mobile number"
+                                                maxLength={10}
+                                                disabled={otpSent}
+                                            />
+                                        </div>
+
+                                        {!otpSent ? (
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleSendContactOTP}
+                                                    disabled={loading}
+                                                    className="bg-[rgb(81,19,23)] hover:bg-[#4A2424]"
+                                                >
+                                                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                                    Send OTP
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={handleCancelContactUpdate}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="phoneOTP">Enter OTP</Label>
+                                                    <Input
+                                                        id="phoneOTP"
+                                                        value={contactOTP}
+                                                        onChange={(e) => setContactOTP(e.target.value)}
+                                                        placeholder="Enter 6-digit OTP"
+                                                        maxLength={6}
+                                                    />
+                                                    {otpTimer > 0 && (
+                                                        <p className="text-xs text-gray-600">
+                                                            Resend OTP in {otpTimer}s
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleVerifyContactOTP}
+                                                        disabled={loading}
+                                                        className="bg-[rgb(81,19,23)] hover:bg-[#4A2424]"
+                                                    >
+                                                        {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                                        Verify & Update
+                                                    </Button>
+                                                    {otpTimer === 0 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={handleSendContactOTP}
+                                                            disabled={loading}
+                                                        >
+                                                            Resend OTP
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={handleCancelContactUpdate}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        <Button type="submit" disabled={loading}>
+                        {/* Optional Personal Information Section */}
+                        <div className="border-t pt-6 mt-6">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                                Additional Information (Optional)
+                            </h3>
+                            <div className="grid gap-4">
+                                {/* Date of Birth */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="dob">Date of Birth</Label>
+                                    <Input
+                                        id="dob"
+                                        type="date"
+                                        value={dateOfBirth}
+                                        onChange={(e) => setDateOfBirth(e.target.value)}
+                                        max={new Date().toISOString().split('T')[0]}
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        We'll send you special birthday offers!
+                                    </p>
+                                </div>
+
+                                {/* Gender */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="gender">Gender</Label>
+                                    <select
+                                        id="gender"
+                                        value={gender}
+                                        onChange={(e) => setGender(e.target.value)}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">Prefer not to say</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                {/* Preferred Language */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="language">Preferred Language</Label>
+                                    <select
+                                        id="language"
+                                        value={preferredLanguage}
+                                        onChange={(e) => setPreferredLanguage(e.target.value)}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="en">English</option>
+                                        <option value="hi">Hindi</option>
+                                        <option value="ta">Tamil</option>
+                                        <option value="te">Telugu</option>
+                                        <option value="kn">Kannada</option>
+                                        <option value="ml">Malayalam</option>
+                                        <option value="bn">Bengali</option>
+                                        <option value="gu">Gujarati</option>
+                                        <option value="pa">Punjabi</option>
+                                    </select>
+                                    <p className="text-xs text-gray-500">
+                                        Helps us communicate better with you
+                                    </p>
+                                </div>
+
+                                {/* Alternate Phone */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="alternatePhone">Alternate Phone Number</Label>
+                                    <Input
+                                        id="alternatePhone"
+                                        type="tel"
+                                        value={alternatePhone}
+                                        onChange={(e) => setAlternatePhone(e.target.value)}
+                                        placeholder="10-digit mobile number"
+                                        maxLength={10}
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        Backup contact for delivery coordination
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button type="submit" disabled={loading || isUpdatingContact}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Update Profile
                         </Button>

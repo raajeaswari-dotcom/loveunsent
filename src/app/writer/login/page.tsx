@@ -11,15 +11,43 @@ import { useRouter } from 'next/navigation';
 export default function WriterLoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+        setError('');
+
+        try {
+            const email = (e.target as any).email.value;
+            const password = (e.target as any).password.value;
+
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Check if user is actually a writer
+                if (data.data.user.role === 'writer') {
+                    router.push('/writer/orders');
+                    router.refresh();
+                } else {
+                    setError('Access Denied: This portal is for writers only.');
+                    setLoading(false);
+                }
+            } else {
+                setError(data.message || 'Invalid email or password');
+                setLoading(false);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setError('An error occurred during login');
             setLoading(false);
-            router.push('/writer/dashboard'); // Assuming this exists or will exist
-        }, 1000);
+        }
     };
 
     return (
@@ -44,6 +72,13 @@ export default function WriterLoginPage() {
                             <Label htmlFor="password">Password</Label>
                             <Input id="password" type="password" required />
                         </div>
+
+                        {error && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-md mt-4">
+                                {error}
+                            </div>
+                        )}
+
                         <Button className="w-full mt-6" disabled={loading}>
                             {loading ? 'Accessing Workspace...' : 'Enter Workspace'}
                         </Button>

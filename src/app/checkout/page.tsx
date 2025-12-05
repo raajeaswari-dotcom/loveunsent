@@ -4,17 +4,39 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import { MapPin, Trash2 } from 'lucide-react';
+import { MapPin, Trash2, Edit2, Package, FileText } from 'lucide-react';
+import { mockApi } from '@/lib/mockApi';
+import { useCart } from '@/context/CartContext';
 
 export default function CheckoutPage() {
     const router = useRouter();
+    const { items: contextItems, removeItem: removeFromContext } = useCart();
     const [cart, setCart] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [userAddresses, setUserAddresses] = useState<any[]>([]);
     const [paymentMethods, setPaymentMethods] = useState<{ [key: string]: 'cod' | 'online' }>({});
+    const [settings, setSettings] = useState<any>(null);
+
+    // Product data for displaying names
+    const [papers, setPapers] = useState<any[]>([]);
+    const [addons, setAddons] = useState<any[]>([]);
 
     useEffect(() => {
+        const fetchData = async () => {
+            const [papersData, addonsData, settingsResponse] = await Promise.all([
+                mockApi.getProducts(),
+                mockApi.getAddons(),
+                fetch('/api/system-settings').then(res => res.json())
+            ]);
+            setPapers(papersData);
+            setAddons(addonsData);
+            if (settingsResponse?.data?.settings) {
+                setSettings(settingsResponse.data.settings);
+            }
+        };
+        fetchData();
+
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
             const parsedCart = JSON.parse(savedCart);
@@ -47,12 +69,33 @@ export default function CheckoutPage() {
         return userAddresses.find(addr => addr._id === addressId);
     };
 
+    const getPaperName = (paperId: string) => {
+        const paper = papers.find(p => p.id === paperId);
+        return paper?.name || paperId;
+    };
+
+    const getAddonDetails = (addonIds: string[]) => {
+        if (!addonIds || addonIds.length === 0) return [];
+        return addonIds.map(id => {
+            const addon = addons.find(a => a.id === id);
+            return addon || { id, name: id, price: 0 };
+        });
+    };
+
+    const handleEditOrder = (item: any) => {
+        // Store the item in localStorage for pre-filling
+        localStorage.setItem('editingOrder', JSON.stringify(item));
+        // Navigate to customize page with edit mode and orderId
+        router.push(`/customize?edit=true&orderId=${item.id}`);
+    };
+
     const removeFromCart = (itemId: string) => {
         console.log('Removing item from cart:', itemId);
+        // Remove from context (which updates localStorage)
+        removeFromContext(itemId);
+        // Update local state
         const updatedCart = cart.filter(item => item.id !== itemId);
-        console.log('Updated cart:', updatedCart);
         setCart(updatedCart);
-        localStorage.setItem('cart', JSON.stringify(updatedCart));
     };
 
     const handlePlaceOrder = async (item: any) => {
@@ -155,6 +198,7 @@ export default function CheckoutPage() {
     }
 
     const total = cart.reduce((acc, item) => acc + item.price, 0);
+    const defaultPaymentMethod = settings?.paymentMethods?.cod ? 'cod' : (settings?.paymentMethods?.online ? 'online' : null);
 
     return (
         <div className="container max-w-6xl py-10 px-4">
@@ -193,32 +237,86 @@ export default function CheckoutPage() {
 
                                         {/* Message Preview */}
                                         {item.details?.message && (
-                                            <div className="bg-gray-50 p-3 rounded-lg">
-                                                <p className="text-sm font-medium text-gray-700 mb-1">Message:</p>
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <FileText className="w-4 h-4 text-gray-600" />
+                                                    <p className="text-sm font-medium text-gray-700">Message:</p>
+                                                </div>
                                                 <p className="text-sm text-gray-600 line-clamp-3">
                                                     {item.details.message}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {item.details.wordCount || item.details.message.split(' ').length} words
                                                 </p>
                                             </div>
                                         )}
 
                                         {/* Customization Details */}
-                                        <div className="flex flex-wrap gap-3 text-sm">
+                                        <div className="space-y-3">
+                                            {/* Paper Type */}
                                             {item.details?.paperId && (
-                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
-                                                    Paper: {item.details.paperId}
-                                                </span>
+                                                <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                    <Package className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-medium text-blue-900">Paper Type</p>
+                                                        <p className="text-sm font-semibold text-blue-700">
+                                                            {getPaperName(item.details.paperId)}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             )}
+
+                                            {/* Ink Color */}
                                             {item.details?.inkColor && (
-                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
-                                                    Ink: {item.details.inkColor}
-                                                </span>
+                                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                                                    <div
+                                                        className="w-4 h-4 rounded-full border-2 border-gray-300"
+                                                        style={{
+                                                            backgroundColor:
+                                                                item.details.inkColor === 'Blue' ? '#1E3A8A' :
+                                                                    item.details.inkColor === 'Black' ? '#000000' :
+                                                                        item.details.inkColor === 'Red' ? '#DC2626' : '#1E3A8A'
+                                                        }}
+                                                    />
+                                                    <span className="text-sm text-gray-700">
+                                                        <span className="font-medium">Ink:</span> {item.details.inkColor}
+                                                    </span>
+                                                </div>
                                             )}
-                                            {item.details?.addonIds?.length > 0 && (
-                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-700">
-                                                    Add-ons: {item.details.addonIds.length}
-                                                </span>
+
+                                            {/* Add-ons */}
+                                            {item.details?.addonIds && item.details.addonIds.length > 0 && (
+                                                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                                    <p className="text-xs font-medium text-purple-900 mb-2">Add-ons ({item.details.addonIds.length})</p>
+                                                    <div className="space-y-1">
+                                                        {getAddonDetails(item.details.addonIds).map((addon, idx) => (
+                                                            <div key={idx} className="flex justify-between items-center text-sm">
+                                                                <span className="text-purple-700">• {addon.name}</span>
+                                                                <span className="text-purple-900 font-medium">₹{addon.price}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* No Add-ons */}
+                                            {(!item.details?.addonIds || item.details.addonIds.length === 0) && (
+                                                <div className="px-3 py-2 bg-gray-100 rounded-lg">
+                                                    <span className="text-sm text-gray-600">No add-ons selected</span>
+                                                </div>
                                             )}
                                         </div>
+
+                                        {/* Edit Order Button */}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full border-2 border-[rgb(81,19,23)] text-[rgb(81,19,23)] hover:bg-[rgb(81,19,23)] hover:text-white"
+                                            onClick={() => handleEditOrder(item)}
+                                        >
+                                            <Edit2 className="w-4 h-4 mr-2" />
+                                            Edit Order Details
+                                        </Button>
 
                                         {/* Delivery Address */}
                                         <div className="border-t pt-3 mt-3">
@@ -249,26 +347,33 @@ export default function CheckoutPage() {
                                         <div className="border-t pt-3 mt-3">
                                             <p className="text-sm font-medium text-gray-700 mb-2">Payment Method:</p>
                                             <div className="flex flex-col gap-2">
-                                                <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
-                                                    <input
-                                                        type="radio"
-                                                        name={`payment-${item.id}`}
-                                                        checked={(paymentMethods[item.id] || 'cod') === 'cod'}
-                                                        onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'cod' })}
-                                                        className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
-                                                    />
-                                                    <span className="text-sm font-medium">Cash on Delivery</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
-                                                    <input
-                                                        type="radio"
-                                                        name={`payment-${item.id}`}
-                                                        checked={paymentMethods[item.id] === 'online'}
-                                                        onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'online' })}
-                                                        className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
-                                                    />
-                                                    <span className="text-sm font-medium">Online Payment</span>
-                                                </label>
+                                                {settings?.paymentMethods?.cod && (
+                                                    <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
+                                                        <input
+                                                            type="radio"
+                                                            name={`payment-${item.id}`}
+                                                            checked={(paymentMethods[item.id] || defaultPaymentMethod) === 'cod'}
+                                                            onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'cod' })}
+                                                            className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
+                                                        />
+                                                        <span className="text-sm font-medium">Cash on Delivery</span>
+                                                    </label>
+                                                )}
+                                                {settings?.paymentMethods?.online && (
+                                                    <label className="flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-gray-50 transition-colors">
+                                                        <input
+                                                            type="radio"
+                                                            name={`payment-${item.id}`}
+                                                            checked={paymentMethods[item.id] === 'online' || (!settings?.paymentMethods?.cod && defaultPaymentMethod === 'online')}
+                                                            onChange={() => setPaymentMethods({ ...paymentMethods, [item.id]: 'online' })}
+                                                            className="w-4 h-4 text-[rgb(81,19,23)] accent-[rgb(81,19,23)]"
+                                                        />
+                                                        <span className="text-sm font-medium">Online Payment</span>
+                                                    </label>
+                                                )}
+                                                {!settings?.paymentMethods?.cod && !settings?.paymentMethods?.online && (
+                                                    <p className="text-sm text-red-500">No payment methods available.</p>
+                                                )}
                                             </div>
                                         </div>
 
@@ -276,10 +381,12 @@ export default function CheckoutPage() {
                                         <Button
                                             className="w-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] mt-3"
                                             size="lg"
-                                            disabled={isProcessing || !address}
+                                            disabled={isProcessing || !address || (!settings?.paymentMethods?.cod && !settings?.paymentMethods?.online)}
                                             onClick={() => handlePlaceOrder(item)}
                                         >
-                                            {isProcessing ? 'Processing...' : ((paymentMethods[item.id] || 'cod') === 'cod' ? 'Place Order (COD)' : 'Pay Now')}
+                                            {isProcessing ? 'Processing...' : (
+                                                (paymentMethods[item.id] || defaultPaymentMethod) === 'cod' ? 'Place Order (COD)' : 'Pay Now'
+                                            )}
                                         </Button>
                                     </div>
                                 </div>

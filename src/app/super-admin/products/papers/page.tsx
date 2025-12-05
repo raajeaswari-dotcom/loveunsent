@@ -59,6 +59,7 @@ export default function PapersManagementPage() {
         gsm: 0,
         texture: '',
         stock: 0,
+        isActive: true,
     });
 
     useEffect(() => {
@@ -90,6 +91,7 @@ export default function PapersManagementPage() {
             gsm: 0,
             texture: '',
             stock: 0,
+            isActive: true,
         });
         setIsDialogOpen(true);
     };
@@ -105,6 +107,7 @@ export default function PapersManagementPage() {
             gsm: paper.gsm || 0,
             texture: paper.texture || '',
             stock: paper.stock,
+            isActive: paper.isActive,
         });
         setIsDialogOpen(true);
     };
@@ -343,6 +346,19 @@ export default function PapersManagementPage() {
                             value={formData.imageUrl}
                             onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                         />
+
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="isActive"
+                                checked={formData.isActive}
+                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <Label htmlFor="isActive" className="text-sm font-normal">
+                                Active
+                            </Label>
+                        </div>
                     </div>
 
                     <DialogFooter>

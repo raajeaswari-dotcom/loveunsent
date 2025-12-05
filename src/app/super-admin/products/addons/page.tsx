@@ -63,6 +63,7 @@ export default function AddonsManagementPage() {
         price: 0,
         imageUrl: '',
         stock: 0,
+        isActive: true,
     });
 
     useEffect(() => {
@@ -92,6 +93,7 @@ export default function AddonsManagementPage() {
             price: 0,
             imageUrl: '',
             stock: 0,
+            isActive: true,
         });
         setIsDialogOpen(true);
     };
@@ -105,6 +107,7 @@ export default function AddonsManagementPage() {
             price: addon.price,
             imageUrl: addon.imageUrl,
             stock: addon.stock,
+            isActive: addon.isActive,
         });
         setIsDialogOpen(true);
     };
@@ -346,6 +349,19 @@ export default function AddonsManagementPage() {
                             value={formData.imageUrl}
                             onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                         />
+
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="isActive"
+                                checked={formData.isActive}
+                                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <Label htmlFor="isActive" className="text-sm font-normal">
+                                Active
+                            </Label>
+                        </div>
                     </div>
 
                     <DialogFooter>

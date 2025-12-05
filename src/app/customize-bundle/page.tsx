@@ -95,8 +95,27 @@ function CustomizeBundleContent() {
 
     const handleNext = () => {
         const currentLetter = letters[activeTab];
-        if (!isLetterValid(currentLetter)) {
-            alert("Please complete all fields for this letter before proceeding.");
+
+        // Validate message
+        if (!currentLetter.message?.trim()) {
+            alert(`❌ Letter ${activeTab + 1}: Please write your message before proceeding.`);
+            return;
+        }
+
+        // Validate paper
+        if (!currentLetter.paperId) {
+            alert(`❌ Letter ${activeTab + 1}: Please select a paper type before proceeding.`);
+            return;
+        }
+
+        // Validate delivery address
+        if (!currentLetter.recipientAddressId) {
+            alert(`❌ Letter ${activeTab + 1}: DELIVERY ADDRESS REQUIRED\n\nPlease select or add a recipient delivery address in Section 5 (Recipient Details) before proceeding.\n\nYou cannot add to cart without a delivery address for each letter.`);
+            // Scroll to recipient details section
+            const recipientSection = document.querySelector('section:last-of-type');
+            if (recipientSection) {
+                recipientSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
         }
 
@@ -122,8 +141,24 @@ function CustomizeBundleContent() {
     const handleAddToCart = () => {
         // Final Validation
         for (let i = 0; i < letters.length; i++) {
-            if (!isLetterValid(letters[i])) {
-                alert(`Please complete details for Letter ${i + 1}.`);
+            const letter = letters[i];
+
+            if (!letter.message?.trim()) {
+                alert(`❌ Letter ${i + 1}: Missing message\n\nPlease write a message for this letter.`);
+                setIsReviewing(false);
+                setActiveTab(i);
+                return;
+            }
+
+            if (!letter.paperId) {
+                alert(`❌ Letter ${i + 1}: Missing paper selection\n\nPlease select a paper type for this letter.`);
+                setIsReviewing(false);
+                setActiveTab(i);
+                return;
+            }
+
+            if (!letter.recipientAddressId) {
+                alert(`❌ Letter ${i + 1}: DELIVERY ADDRESS REQUIRED\n\nPlease select or add a recipient delivery address for this letter.\n\nYou cannot proceed to checkout without delivery addresses for all letters.`);
                 setIsReviewing(false);
                 setActiveTab(i);
                 return;

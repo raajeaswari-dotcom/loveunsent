@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/db';
 import { Order } from '@/models/Order';
+import '@/models/Paper';
+import '@/models/Handwriting';
+import '@/models/Perfume';
 import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/utils/apiResponse';
 
@@ -80,6 +83,15 @@ export async function GET(req: NextRequest) {
             Order.countDocuments(query)
         ]);
 
+        if (orders.length > 0) {
+            console.log('Sample Order Populated Fields:', {
+                id: orders[0]._id,
+                paperId: orders[0].paperId,
+                handwritingStyleId: orders[0].handwritingStyleId,
+                perfumeId: orders[0].perfumeId
+            });
+        }
+
         return successResponse({
             orders,
             pagination: {
@@ -89,6 +101,7 @@ export async function GET(req: NextRequest) {
             }
         });
     } catch (error: any) {
-        return errorResponse(error.message, 500);
+        console.error('API Error in /api/orders/list:', error);
+        return errorResponse(error.message || 'Internal Server Error', 500);
     }
 }

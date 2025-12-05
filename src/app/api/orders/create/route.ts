@@ -7,6 +7,7 @@ import { Handwriting } from '@/models/Handwriting';
 import { Perfume } from '@/models/Perfume';
 import { Addon } from '@/models/Addon';
 import { User } from '@/models/User';
+import { SystemSetting } from '@/models/SystemSetting';
 import { verifyToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/utils/apiResponse';
 import { z } from 'zod';
@@ -83,8 +84,27 @@ export async function POST(req: NextRequest) {
             return errorResponse('Validation Error', 400, result.error.format());
         }
 
-        const { items, shippingAddress } = result.data;
+        const { items, shippingAddress, paymentMethod } = result.data;
         console.log('Validated shipping address:', shippingAddress);
+
+        // System Settings Validation
+        const settings = await (SystemSetting as any).getSettings();
+
+        // 1. Validate Payment Method
+        if (paymentMethod === 'cod' && !settings.paymentMethods.cod) {
+            return errorResponse('Cash on Delivery is currently disabled.', 400);
+        }
+        if (paymentMethod === 'online' && !settings.paymentMethods.online) {
+            return errorResponse('Online payment is currently disabled.', 400);
+        }
+
+        // 2. Validate Add-ons
+        if (!settings.addonsEnabled) {
+            const hasAddons = items.some(item => item.addOns && item.addOns.length > 0);
+            if (hasAddons) {
+                return errorResponse('Add-ons are currently disabled.', 400);
+            }
+        }
 
         // Calculate Total Price
         let totalAmount = 0;
@@ -113,23 +133,22 @@ export async function POST(req: NextRequest) {
 
             let itemPrice = (paper.priceExtra || 0) + (style.priceExtra || 0) + 99; // Base price 99
 
-            if (item.perfumeId && mongoose.Types.ObjectId.isValid(item.perfumeId)) {
-                const perfume = await Perfume.findById(item.perfumeId);
-                if (perfume) itemPrice += (perfume.priceExtra || 0);
+            // Handle perfume - check if it's a valid ObjectId or mock data
+            if (item.perfumeId) {
+                if (mongoose.Types.ObjectId.isValid(item.perfumeId)) {
+                    const perfume = await Perfume.findById(item.perfumeId);
+                    if (perfume) itemPrice += (perfume.priceExtra || 0);
+                }
             }
 
+            // Handle addons - check if they're valid ObjectIds or mock data
             if (item.addOns && item.addOns.length > 0) {
-                // Filter out invalid ObjectIds
                 const validAddonIds = item.addOns.filter((id: string) => mongoose.Types.ObjectId.isValid(id));
 
                 if (validAddonIds.length > 0) {
+                    // Real database addons
                     const addons = await Addon.find({ _id: { $in: validAddonIds } });
                     addons.forEach(addon => itemPrice += (addon.price || 0));
-
-                    // Update item.addOns to only include valid IDs
-                    item.addOns = validAddonIds;
-                } else {
-                    item.addOns = [];
                 }
             } else {
                 item.addOns = [];
@@ -140,14 +159,14 @@ export async function POST(req: NextRequest) {
                 ...item,
                 paperId: paperId,
                 handwritingStyleId: handwritingStyleId,
-                paper: paperId, // Map to schema field name if needed, or use direct ID
+                paper: paperId,
                 style: handwritingStyleId,
-                price: itemPrice
+                price: itemPrice,
+                inkColor: item.inkColor || 'Blue',
             });
         }
 
         // Create Payment Order (Razorpay or COD placeholder)
-        const { paymentMethod } = result.data;
         let paymentOrder;
 
         if (paymentMethod === 'cod') {
@@ -176,15 +195,16 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Create DB Order (Assuming single item per order for simplicity based on schema, or loop if multi-order)
+        // Create DB Order
         const createdOrders = [];
         for (const item of enrichedItems) {
             const newOrder = await Order.create({
                 customerId: userId,
                 paperId: item.paperId,
                 handwritingStyleId: item.handwritingStyleId,
-                perfumeId: item.perfumeId,
-                addOns: item.addOns,
+                perfumeId: item.perfumeId || null,
+                addOns: item.addOns || [],
+                inkColor: item.inkColor || 'Blue',
                 message: item.messageContent,
                 voiceNoteURL: item.voiceNoteUrl,
                 wordCount: item.wordCount,
@@ -199,7 +219,7 @@ export async function POST(req: NextRequest) {
                 shippingAddress
             });
             createdOrders.push(newOrder);
-            // Trigger Notification (Async - don't await to speed up response)
+            // Trigger Notification (Async)
             triggerNotification('order_placed', newOrder).catch(console.error);
         }
 

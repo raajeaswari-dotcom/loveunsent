@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, PenTool, Heart, Send } from "lucide-react";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { getCloudinaryUrl } from "@/lib/cloudinaryClient";
-import { collections } from "@/data/collectionData";
+
 
 export default function Home() {
   return (
@@ -124,7 +124,7 @@ function OurCollection() {
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        const response = await fetch('/api/products/collection/list');
+        const response = await fetch('/api/collections');
 
         if (!response.ok) {
           console.error('Failed to fetch collections, status:', response.status);
@@ -133,14 +133,10 @@ function OurCollection() {
         }
 
         const result = await response.json();
-        console.log('Collections API response:', result);
-
         if (result.success && result.data) {
           const collectionData = result.data.collections || [];
-          console.log('Setting collections:', collectionData.length, 'items');
           setCollections(collectionData);
         } else {
-          console.error('API returned success=false or no data:', result);
           setCollections([]);
         }
       } catch (error) {
@@ -195,7 +191,7 @@ function OurCollection() {
   return (
     <section className="pt-10 pb-20 bg-transparent">
       <div className="container px-4">
-        <h2 className="text-4xl font-nighty text-center mb-16 text-[#511317]">Our Collection</h2>
+        <h2 className="text-4xl font-display font-black text-center mb-16 text-[#2C1B13]">Our Collection</h2>
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -239,22 +235,22 @@ function OurCollection() {
               {collections.map((collection, index) => (
                 <div
                   key={collection._id || index}
-                  className="min-w-[350px] bg-transparent border-2 border-gray-100 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
+                  className="min-w-[350px] bg-transparent border-2 border-[#2C1B13]/10 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
                 >
                   <div className="h-48 overflow-hidden relative">
                     <img
-                      src={getCloudinaryUrl(collection.imageUrl)}
+                      src={collection.imageUrl}
                       alt={collection.name}
                       className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
                   </div>
                   <div className="p-6 flex flex-col flex-1">
-                    <h3 className="text-xl font-bold mb-3 text-[#511317] font-gorditas uppercase">{collection.name}</h3>
-                    <p className="text-[#511317] text-sm mb-6 flex-1 leading-relaxed">
+                    <h3 className="text-xl font-black mb-3 text-[#2C1B13] font-display uppercase">{collection.name}</h3>
+                    <p className="text-[#2C1B13] text-sm mb-6 flex-1 leading-relaxed">
                       {collection.description}
                     </p>
-                    <Link href="/customize" className="mt-auto">
+                    <Link href={`/customize?type=${collection.slug}`} className="mt-auto">
                       <Button
                         className="w-full h-10 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-extralight text-sm"
                       >

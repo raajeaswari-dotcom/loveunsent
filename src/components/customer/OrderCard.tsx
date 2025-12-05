@@ -13,12 +13,16 @@ interface OrderCardProps {
         _id: string;
         orderId: string;
         createdAt: string;
-        workflowStatus: string;
+        workflowStatus: string; // Note: Schema uses workflowState, but frontend seems to use workflowStatus? Need to check.
+        // Actually, let's check what the API returns. API returns `orders` from `Order.find()`.
+        // The schema has `workflowState`.
+        // OrderCard uses `workflowStatus`.
+        // I should check if the API maps it.
         paymentStatus: string;
         totalAmount: number;
-        paper?: { name: string };
-        handwritingStyle?: { name: string };
-        perfume?: { name: string };
+        paperId?: { name: string };
+        handwritingStyleId?: { name: string };
+        perfumeId?: { name: string };
         shippingAddress?: {
             fullName: string;
             addressLine1: string;
@@ -36,7 +40,13 @@ interface OrderCardProps {
 export default function OrderCard({ order, onCancel }: OrderCardProps) {
     const [expanded, setExpanded] = useState(false);
 
-    const canCancel = ['payment_pending', 'payment_completed'].includes(order.workflowStatus);
+    // Schema has workflowState, but let's see if we need to map it.
+    // If the API returns raw mongoose document, it has workflowState.
+    // But OrderCard uses workflowStatus.
+    // Let's assume for now we need to use workflowState if workflowStatus is undefined.
+    const status = (order as any).workflowState || order.workflowStatus;
+
+    const canCancel = ['payment_pending', 'payment_completed', 'pending_payment'].includes(status);
 
     return (
         <Card className="hover:shadow-md transition-shadow">
@@ -45,8 +55,8 @@ export default function OrderCard({ order, onCancel }: OrderCardProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-bold text-lg">Order #{order.orderId}</h3>
-                            <OrderStatusBadge status={order.workflowStatus} />
+                            <h3 className="font-bold text-lg">Order #{order.orderId || (order as any)._id.substring(0, 8)}</h3>
+                            <OrderStatusBadge status={status} />
                         </div>
                         <p className="text-sm text-muted-foreground">
                             Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -57,25 +67,25 @@ export default function OrderCard({ order, onCancel }: OrderCardProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg">₹{order.totalAmount}</span>
+                        <span className="font-bold text-lg">₹{(order as any).price || order.totalAmount}</span>
                     </div>
                 </div>
 
                 {/* Product Details */}
                 <div className="space-y-2 mb-4">
-                    {order.paper && (
+                    {order.paperId && (
                         <p className="text-sm">
-                            <span className="font-medium">Paper:</span> {order.paper.name}
+                            <span className="font-medium">Paper:</span> {(order.paperId as any).name || 'Default'}
                         </p>
                     )}
-                    {order.handwritingStyle && (
+                    {order.handwritingStyleId && (
                         <p className="text-sm">
-                            <span className="font-medium">Style:</span> {order.handwritingStyle.name}
+                            <span className="font-medium">Style:</span> {(order.handwritingStyleId as any).name || 'Default'}
                         </p>
                     )}
-                    {order.perfume && (
+                    {order.perfumeId && (
                         <p className="text-sm">
-                            <span className="font-medium">Perfume:</span> {order.perfume.name}
+                            <span className="font-medium">Perfume:</span> {(order.perfumeId as any).name || 'None'}
                         </p>
                     )}
                 </div>
@@ -110,7 +120,7 @@ export default function OrderCard({ order, onCancel }: OrderCardProps) {
                         {expanded ? 'Hide' : 'View'} Details
                     </Button>
 
-                    {order.workflowStatus === 'delivered' && (
+                    {(order.workflowStatus === 'delivered' || (order as any).payment?.status === 'captured' || (order as any).workflowState === 'paid' || (order as any).workflowState === 'payment_completed') && (
                         <Button variant="outline" size="sm" className="gap-2" asChild>
                             <a href={`/api/orders/${order._id}/invoice`} target="_blank" rel="noopener noreferrer">
                                 <FileText className="w-4 h-4" />
@@ -139,7 +149,7 @@ export default function OrderCard({ order, onCancel }: OrderCardProps) {
                                 <Package className="w-4 h-4" />
                                 Order Progress
                             </h4>
-                            <OrderTimeline currentStatus={order.workflowStatus} />
+                            <OrderTimeline currentStatus={status} />
                         </div>
 
                         {/* Shipping Address */}

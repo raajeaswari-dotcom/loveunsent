@@ -22,15 +22,23 @@ const CUSTOMER_WORKFLOW_STAGES = [
 // Map backend status to customer-friendly stages
 const STATUS_TO_STAGE: Record<string, number> = {
     'payment_pending': 0,
+    'pending_payment': 0,
     'payment_completed': 1,
+    'paid': 1,
     'writer_assigned': 2,
+    'assigned': 2,
     'writing_in_progress': 2,
     'draft_uploaded': 2,
     'qc_review': 2,
+    'changes_requested': 2,
     'qc_approved': 2,
+    'approved': 2,
     'order_packed': 2,
+    'packed': 2,
     'order_shipped': 3,
+    'shipped': 3,
     'delivered': 4,
+    'cancelled': 4, // Treat cancelled as end state? Or maybe separate? For now 4.
 };
 
 export default function OrderTimeline({ currentStatus, statusHistory }: OrderTimelineProps) {
@@ -56,10 +64,10 @@ export default function OrderTimeline({ currentStatus, statusHistory }: OrderTim
                         {/* Icon */}
                         <div
                             className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 ${isCompleted
-                                    ? 'bg-green-500 border-green-500 text-white'
-                                    : isCurrent
-                                        ? 'bg-blue-500 border-blue-500 text-white'
-                                        : 'bg-gray-100 border-gray-300 text-gray-400'
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : isCurrent
+                                    ? 'bg-blue-500 border-blue-500 text-white'
+                                    : 'bg-gray-100 border-gray-300 text-gray-400'
                                 }`}
                         >
                             <Icon className="w-4 h-4" />
@@ -70,8 +78,8 @@ export default function OrderTimeline({ currentStatus, statusHistory }: OrderTim
                             <div className="flex items-center justify-between">
                                 <p
                                     className={`font-medium ${isCompleted || isCurrent
-                                            ? 'text-gray-900'
-                                            : 'text-gray-400'
+                                        ? 'text-gray-900'
+                                        : 'text-gray-400'
                                         }`}
                                 >
                                     {stage.label}

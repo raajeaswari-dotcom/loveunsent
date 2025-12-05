@@ -49,60 +49,191 @@ export default function CustomizePageContent() {
   // Data fetched from mock API
   const [papers, setPapers] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
+  const [addonsEnabled, setAddonsEnabled] = useState(true);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<any>(null);
+  const [bundleData, setBundleData] = useState<any>({ numLetters: 5, letters: Array(5).fill({ content: "" }) });
+  const [bundlePrice, setBundlePrice] = useState(0);
+
+  // Derived state
+  const isBundle = selectedCollection ? ["open-when", "unsent"].includes(selectedCollection.slug) : false;
+
+  const addonPrice = state.addonIds?.reduce((sum: number, id: string) => {
+    const addon = addons.find(a => a.id === id);
+    return sum + (addon ? addon.price : 0);
+  }, 0) || 0;
+
+  const displayTotal = isBundle ? (bundlePrice + addonPrice) : total;
 
   useEffect(() => {
     const fetchData = async () => {
-      const [p, ad] = await Promise.all([
+      const [p, ad, settingsResponse, collectionsResponse] = await Promise.all([
         mockApi.getProducts(),
         mockApi.getAddons(),
+        fetch('/api/system-settings').then(res => res.json()),
+        fetch('/api/collections').then(res => res.json())
       ]);
       setPapers(p);
       setAddons(ad);
+      if (settingsResponse?.data?.settings) {
+        setAddonsEnabled(settingsResponse.data.settings.addonsEnabled ?? true);
+      }
+      if (collectionsResponse?.success && collectionsResponse?.data?.collections) {
+        setCollections(collectionsResponse.data.collections);
+      }
       setLoading(false);
 
-      // Set default paper to Ordinary
-      if (!state.paperId) {
-        updateState({ paperId: "ordinary" });
+      // Check if we're in edit mode
+      const isEditMode = searchParams.get("edit") === "true";
+      if (isEditMode) {
+        const editingOrder = localStorage.getItem('editingOrder');
+        if (editingOrder) {
+          const orderData = JSON.parse(editingOrder);
+          // Pre-fill the form with existing order data
+          updateState({
+            message: orderData.details?.message || "",
+            paperId: orderData.details?.paperId || "ordinary",
+            addonIds: orderData.details?.addonIds || [],
+            recipientAddressId: orderData.details?.recipientAddressId || null,
+          });
+          setInkColor(orderData.details?.inkColor || "Blue");
+          setOccasion(orderData.details?.occasion || "");
+          // Check if it was a bundle and restore bundle data
+          if (orderData.details?.isBundle && orderData.details?.bundleData) {
+            setBundleData(orderData.details.bundleData);
+          }
+
+          // Clear the editing order from localStorage
+          localStorage.removeItem('editingOrder');
+        }
+      } else {
+        // Set default paper to Ordinary for new orders
+        if (!state.paperId) {
+          updateState({ paperId: "ordinary" });
+        }
       }
     };
     fetchData();
+  }, []);
 
-    const occasionParam = searchParams.get("occasion");
-    const typeParam = searchParams.get("type");
-    if (occasionParam) {
-      setOccasion(formatOccasionName(occasionParam));
-    } else if (typeParam) {
-      setOccasion(formatOccasionName(typeParam));
+  useEffect(() => {
+    // If bundle mode, create initial letters array if not set
+    if (isBundle && (!bundleData.letters || bundleData.letters.length === 0)) {
+      setBundleData({ numLetters: 5, letters: Array(5).fill({ content: "" }) });
+      setBundlePrice(5 * 400);
     }
-  }, [searchParams]);
+  }, [isBundle]);
+
+  useEffect(() => {
+    const typeParam = searchParams.get("type");
+    if (typeParam && collections.length > 0) {
+      const found = collections.find((c: any) => c.slug === typeParam);
+      if (found) {
+        setSelectedCollection(found);
+        setOccasion(found.name);
+      }
+    } else {
+      const occasionParam = searchParams.get("occasion");
+      if (occasionParam) {
+        setOccasion(formatOccasionName(occasionParam));
+      }
+    }
+  }, [searchParams, collections]);
 
   const handleAddToCart = () => {
-    if (!state.message?.trim()) {
-      alert("Please write your message.");
-      return;
+    // Validate message or bundle content
+    if (isBundle) {
+      const hasContent = bundleData.letters.some((l: any) => l.content.trim().length > 0);
+      if (!hasContent) {
+        alert('❌ Please write at least one letter.');
+        return;
+      }
+    } else {
+      if (!state.message?.trim()) {
+        alert('❌ Please write your message before adding to cart.');
+        return;
+      }
     }
+
+    // Validate paper selection
     if (!state.paperId) {
-      alert("Please select a paper.");
-      return;
-    }
-    if (!state.recipientAddressId) {
-      alert("Please select or add a recipient address.");
+      alert('❌ Please select a paper type before adding to cart.');
       return;
     }
 
-    addItem({
-      id: `custom_${Date.now()}`,
-      type: "letter",
-      name: "Custom Handwritten Letter",
-      price: total,
-      quantity: 1,
-      details: {
-        ...state,
-        breakdown,
-        occasion,
-        inkColor,
-      },
-    });
+    // Validate delivery address - CRITICAL
+    if (!state.recipientAddressId) {
+      alert('❌ DELIVERY ADDRESS REQUIRED\n\nPlease select or add a recipient delivery address in Section 5 (Recipient Details) before adding to cart.\n\nYou cannot proceed to checkout without a delivery address.');
+      // Scroll to recipient details section
+      const recipientSection = document.querySelector('section:last-of-type');
+      if (recipientSection) {
+        recipientSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Prepare content for cart
+    let finalMessage = state.message;
+    if (isBundle) {
+      finalMessage = bundleData.letters.map((l: any, i: number) => `[Letter ${i + 1}]\n${l.content}`).join("\n\n-------------------\n\n");
+    }
+
+    // Check if we're editing an existing order
+    const isEditMode = searchParams.get("edit") === "true";
+
+    if (isEditMode) {
+      // Update existing cart item
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const editingOrderId = searchParams.get("orderId");
+
+      // Find and update the item, or add as new if not found
+      const itemIndex = cart.findIndex((item: any) => item.id === editingOrderId);
+
+      const updatedItem = {
+        id: editingOrderId || `custom_${Date.now()}`,
+        type: "letter",
+        name: selectedCollection ? selectedCollection.name : "Custom Handwritten Letter",
+        price: displayTotal,
+        quantity: 1,
+        details: {
+          ...state,
+          message: finalMessage,
+          breakdown,
+          occasion: occasion || (selectedCollection ? selectedCollection.name : ""),
+          inkColor,
+          isBundle,
+          bundleData: isBundle ? bundleData : undefined
+        },
+      };
+
+      if (itemIndex >= 0) {
+        cart[itemIndex] = updatedItem;
+      } else {
+        cart.push(updatedItem);
+      }
+
+      localStorage.setItem('cart', JSON.stringify(cart));
+      alert('✅ Order updated successfully!');
+    } else {
+      // All validations passed - add new item to cart
+      addItem({
+        id: `custom_${Date.now()}`,
+        type: "letter",
+        name: selectedCollection ? selectedCollection.name : "Custom Handwritten Letter",
+        price: displayTotal,
+        quantity: 1,
+        details: {
+          ...state,
+          message: finalMessage,
+          breakdown,
+          occasion: occasion || (selectedCollection ? selectedCollection.name : ""),
+          inkColor,
+          isBundle,
+          bundleData: isBundle ? bundleData : undefined
+        },
+      });
+    }
+
     router.push("/checkout");
   };
 
@@ -124,11 +255,11 @@ export default function CustomizePageContent() {
       <div className="container max-w-6xl py-8 px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900">
-            Craft Your Letter
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900 font-display">
+            {selectedCollection ? selectedCollection.name : "Craft Your Letter"}
           </h1>
           <p className="text-gray-700 max-w-2xl mx-auto">
-            Every detail matters. Let's create something beautiful together.
+            {selectedCollection ? selectedCollection.description : "Every detail matters. Let's create something beautiful together."}
           </p>
         </div>
 
@@ -146,6 +277,13 @@ export default function CustomizePageContent() {
                 setInkColor={setInkColor}
                 selectedAddressId={state.recipientAddressId}
                 onSelectAddress={(addressId) => updateState({ recipientAddressId: addressId })}
+                addonsEnabled={addonsEnabled}
+                isBundle={isBundle}
+                bundleData={bundleData}
+                onUpdateBundle={(data) => {
+                  setBundleData(data);
+                  if (data.price !== undefined) setBundlePrice(data.price);
+                }}
               />
             </Card>
           </div>
@@ -193,7 +331,7 @@ export default function CustomizePageContent() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-700">Total</span>
                     <span className="text-2xl font-bold text-[rgb(81,19,23)]">
-                      ₹{total}
+                      ₹{displayTotal}
                     </span>
                   </div>
                 </div>
@@ -203,7 +341,7 @@ export default function CustomizePageContent() {
                 onClick={handleAddToCart}
                 className="w-full h-12 rounded-full bg-[rgb(81,19,23)] hover:bg-[#4A2424] text-white font-bold text-lg"
               >
-                Add to Cart
+                {searchParams.get("edit") === "true" ? "Update Order" : "Add to Cart"}
               </Button>
             </Card>
           </div>

@@ -36,25 +36,77 @@ export async function GET(
         }
 
         // Generate PDF invoice
-        const doc = new PDFDocument();
-        const buffers: Buffer[] = [];
-        doc.on('data', (chunk) => buffers.push(chunk));
-        doc.fontSize(20).text('Invoice', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Order ID: ${order._id}`);
-        doc.text(`Customer ID: ${order.customerId}`);
-        doc.text(`Paper: ${order.paperId?.name ?? ''}`);
-        doc.text(`Handwriting Style: ${order.handwritingStyleId?.name ?? ''}`);
-        doc.text(`Perfume: ${order.perfumeId?.name ?? ''}`);
-        doc.text(`Price: ${order.price} ${order.currency}`);
-        doc.end();
+        const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+            const doc = new PDFDocument();
+            const buffers: Buffer[] = [];
 
-        const pdfBuffer = Buffer.concat(buffers);
+            doc.on('data', (chunk) => buffers.push(chunk));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', reject);
+
+            // Header
+            doc.fontSize(20).text('LOVE UNSENT', { align: 'center' });
+            doc.fontSize(16).text('INVOICE', { align: 'center' });
+            doc.moveDown();
+
+            // Meta
+            doc.fontSize(10);
+            doc.text(`Invoice Date: ${new Date().toLocaleDateString('en-IN')}`, { align: 'right' });
+            doc.text(`Order ID: ${order.orderId || order._id}`, { align: 'right' });
+            doc.moveDown();
+
+            // Bill To
+            doc.text('Bill To:', { underline: true });
+            if (order.shippingAddress) {
+                doc.text(order.shippingAddress.fullName);
+                doc.text(order.shippingAddress.addressLine1);
+                if (order.shippingAddress.addressLine2) doc.text(order.shippingAddress.addressLine2);
+                doc.text(`${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`);
+                doc.text(order.shippingAddress.country || 'India');
+                doc.text(`Phone: ${order.shippingAddress.phone || order.shippingAddress.recipientPhone || 'N/A'}`);
+            } else {
+                doc.text('Address not available');
+            }
+            doc.moveDown();
+
+            // Line Items
+            const tableTop = doc.y;
+            doc.text('Item', 50, tableTop, { underline: true });
+            doc.text('Details', 200, tableTop, { underline: true });
+            doc.text('Price', 450, tableTop, { underline: true, align: 'right' });
+            doc.moveDown();
+
+            let y = doc.y;
+
+            // Letter
+            doc.text('Handwritten Letter', 50, y);
+            const details = [
+                `Paper: ${order.paperId?.name || 'N/A'}`,
+                `Style: ${order.handwritingStyleId?.name || 'N/A'}`,
+                `Perfume: ${order.perfumeId?.name || 'None'}`
+            ].join(', ');
+
+            doc.text(details, 200, y, { width: 200 });
+            doc.text(`${order.currency} ${order.price}`, 450, y, { align: 'right' });
+
+            doc.moveDown(); // Space after item
+
+            // Total
+            doc.moveDown();
+            const totalY = doc.y;
+            doc.fontSize(12).text(`Total Amount: ${order.currency} ${order.price}`, 350, totalY, { align: 'right', bold: true });
+
+            // Payment Status
+            doc.fontSize(10).text(`Payment Status: ${(order.payment?.status || 'Pending').toUpperCase()}`, 50, totalY + 20);
+
+            doc.end();
+        });
+
         return new NextResponse(pdfBuffer, {
             status: 200,
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="invoice-${order._id}.pdf"`,
+                'Content-Disposition': `attachment; filename="invoice-${order.orderId || order._id}.pdf"`,
             },
         });
     } catch (error: any) {

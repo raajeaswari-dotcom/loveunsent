@@ -11,10 +11,12 @@ import { useRouter } from 'next/navigation';
 export default function SuperAdminLoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
 
         try {
             const email = (e.target as any).email.value;
@@ -29,20 +31,21 @@ export default function SuperAdminLoginPage() {
             const data = await response.json();
 
             if (response.ok) {
-                // Check if user is actually a super admin or admin
-                if (data.data.user.role === 'super_admin' || data.data.user.role === 'admin') {
+                // Check if user is actually a super admin
+                if (data.data.user.role === 'super_admin') {
                     router.push('/super-admin/dashboard');
+                    router.refresh();
                 } else {
-                    alert('Access Denied: You do not have super admin privileges.');
+                    setError('Access Denied: You do not have super admin privileges.');
                     setLoading(false);
                 }
             } else {
-                alert(data.message || 'Login failed');
+                setError(data.message || 'Invalid email or password');
                 setLoading(false);
             }
         } catch (error) {
             console.error('Login error:', error);
-            alert('An error occurred during login');
+            setError('An error occurred during login');
             setLoading(false);
         }
     };
@@ -69,6 +72,13 @@ export default function SuperAdminLoginPage() {
                             <Label htmlFor="password" className="text-zinc-400">Master Key</Label>
                             <Input id="password" type="password" className="bg-zinc-950 border-zinc-800 text-zinc-50" required />
                         </div>
+
+                        {error && (
+                            <div className="text-sm text-red-400 bg-red-950/50 border border-red-900 p-3 rounded-md mt-4">
+                                {error}
+                            </div>
+                        )}
+
                         <Button className="w-full mt-6 bg-red-600 text-white hover:bg-red-700" disabled={loading}>
                             {loading ? 'Verifying Access...' : 'Enter Mainframe'}
                         </Button>

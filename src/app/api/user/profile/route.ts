@@ -43,7 +43,12 @@ export async function GET(req: NextRequest) {
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
-                addresses: user.addresses
+                addresses: user.addresses,
+                // Optional personal information
+                dateOfBirth: user.dateOfBirth,
+                gender: user.gender,
+                preferredLanguage: user.preferredLanguage,
+                alternatePhone: user.alternatePhone,
             }
         });
     } catch (error: any) {
@@ -77,13 +82,18 @@ export async function PUT(req: NextRequest) {
         console.log('Profile PUT - User ID:', userId);
 
         const body = await req.json();
-        const { name, addresses } = body;
+        const { name, addresses, dateOfBirth, gender, preferredLanguage, alternatePhone } = body;
 
         console.log('Profile PUT - Update data:', { name, addressCount: addresses?.length });
 
         const updateData: any = {};
         if (name) updateData.name = name;
         if (addresses) updateData.addresses = addresses;
+        // Optional fields - allow null to clear them
+        if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
+        if (gender !== undefined) updateData.gender = gender;
+        if (preferredLanguage !== undefined) updateData.preferredLanguage = preferredLanguage;
+        if (alternatePhone !== undefined) updateData.alternatePhone = alternatePhone;
 
         console.log('Profile PUT - Updating user with:', updateData);
 
@@ -112,7 +122,12 @@ export async function PUT(req: NextRequest) {
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
-                addresses: user.addresses
+                addresses: user.addresses,
+                // Optional personal information
+                dateOfBirth: user.dateOfBirth,
+                gender: user.gender,
+                preferredLanguage: user.preferredLanguage,
+                alternatePhone: user.alternatePhone,
             }
         });
     } catch (error: any) {
